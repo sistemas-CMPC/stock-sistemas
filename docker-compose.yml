@@ -1,0 +1,36 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stock
+      POSTGRES_PASSWORD: stock
+      POSTGRES_DB: stock
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock -d stock"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://stock:stock@db:5432/stock
+      AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production-please}
+      AUTH_TRUST_HOST: "true"
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@sistemas.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      ADMIN_NAME: ${ADMIN_NAME:-Operador Sistemas}
+    ports:
+      - "3000:3000"
+
+volumes:
+  postgres_data:
