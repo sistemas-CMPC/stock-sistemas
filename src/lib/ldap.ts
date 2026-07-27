@@ -45,31 +45,43 @@ function netbiosDomain(dnsDomain: string): string {
   return (dnsDomain.split(".")[0] ?? dnsDomain).toUpperCase();
 }
 
-function loadTlsOptions(): {
+function loadTlsOptions(servername?: string): {
   ca?: Buffer[];
   rejectUnauthorized: boolean;
-  minVersion: "TLSv1.2";
+  servername?: string;
+  minVersion?: "TLSv1.2";
 } {
   const insecure = process.env.LDAP_TLS_INSECURE === "true";
   const caFile = process.env.LDAP_TLS_CA_FILE?.trim();
   const resolved = caFile ? resolve(caFile) : null;
 
-  if (resolved && existsSync(resolved)) {
-    return {
-      ca: [readFileSync(resolved)],
-      rejectUnauthorized: !insecure,
-      minVersion: "TLSv1.2",
-    };
-  }
+  const options: {
+    ca?: Buffer[];
+    rejectUnauthorized: boolean;
+    servername?: string;
+    minVersion?: "TLSv1.2";
+  } = {
+    rejectUnauthorized: !insecure,
+    ...(servername ? { servername } : {}),
+    ...(insecure ? {} : { minVersion: "TLSv1.2" as const }),
+  };
 
-  if (caFile) {
+  // Con insecure no inyectamos CA custom: a veces leaf certs rompen el handshake
+  if (!insecure && resolved && existsSync(resolved)) {
+    options.ca = [readFileSync(resolved)];
+  } else if (caFile && !existsSync(resolved!)) {
     console.warn(`[ldap] No se encontró el certificado en ${resolved}`);
   }
 
-  return {
-    rejectUnauthorized: !insecure,
-    minVersion: "TLSv1.2",
-  };
+  return options;
+}
+
+function hostnameFromLdapUrl(url: string): string | undefined {
+  try {
+    return new URL(url).hostname || undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 function firstAttr(entry: Entry, name: string): string | undefined {
@@ -227,15 +239,24 @@ async function authenticateAgainstUrl(
   const domain = requiredEnv("LDAP_DOMAIN");
   const groupName = process.env.LDAP_GROUP?.trim() || "GG_Sistemas";
   const configuredGroupDn = process.env.LDAP_GROUP_DN?.trim();
+  const hostname = hostnameFromLdapUrl(url);
+  const tlsOptions = loadTlsOptions(hostname);
+  const isLdaps = url.toLowerCase().startsWith("ldaps://");
+  const wantsStartTls =
+    !isLdaps && process.env.LDAP_START_TLS === "true";
 
   const client = new Client({
     url,
     timeout: 15_000,
     connectTimeout: 10_000,
-    tlsOptions: loadTlsOptions(),
+    tlsOptions: isLdaps ? tlsOptions : undefined,
   });
 
   try {
+    if (wantsStartTls) {
+      await client.startTLS(tlsOptions);
+    }
+
     await bindWithFallbacks(client, username, password, domain);
 
     const { searchEntries: users } = await client.search(baseDn, {
