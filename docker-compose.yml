@@ -22,6 +22,10 @@ services:
     depends_on:
       db:
         condition: service_healthy
+    # El contenedor no resuelve *.cmpc.local solo: mapeá las IPs de los DC
+    extra_hosts:
+      - "SRV-DC01.cmpc.local:${DC01_IP:?faltan DC01_IP en .env}"
+      - "SRV-DC02.cmpc.local:${DC02_IP:?faltan DC02_IP en .env}"
     environment:
       DATABASE_URL: postgresql://stock:stock@db:5432/stock
       AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production-please}
