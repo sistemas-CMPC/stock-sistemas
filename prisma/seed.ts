@@ -15,36 +15,6 @@ const defaultCategories = [
   { name: "Otro", isBackupDisk: false },
 ];
 
-const officeUsers = [
-  { username: "nsosa", name: "N. Sosa", password: "nsosa**" },
-  { username: "nwei", name: "N. Wei", password: "kukita**" },
-  { username: "ebellon", name: "E. Bellon", password: "ebellon**" },
-  { username: "rpardo", name: "R. Pardo", password: "rpardo**" },
-];
-
-async function upsertUser(input: {
-  username: string;
-  name: string;
-  password: string;
-  email?: string | null;
-}) {
-  const passwordHash = await hash(input.password, 10);
-  await prisma.user.upsert({
-    where: { username: input.username },
-    update: {
-      name: input.name,
-      passwordHash,
-      email: input.email ?? null,
-    },
-    create: {
-      username: input.username,
-      name: input.name,
-      passwordHash,
-      email: input.email ?? null,
-    },
-  });
-}
-
 async function main() {
   for (const category of defaultCategories) {
     await prisma.category.upsert({
@@ -54,24 +24,39 @@ async function main() {
     });
   }
 
-  for (const user of officeUsers) {
-    await upsertUser(user);
+  // Usuario local solo para desarrollo o emergencia (AUTH_ALLOW_LOCAL=true)
+  const allowLocal = process.env.AUTH_ALLOW_LOCAL === "true";
+  const adminPassword = process.env.ADMIN_PASSWORD;
+
+  if (allowLocal && adminPassword) {
+    const adminUsername = (
+      process.env.ADMIN_USERNAME ?? "admin"
+    ).trim().toLowerCase();
+    const adminName = process.env.ADMIN_NAME ?? "Operador Sistemas";
+    const adminEmail = process.env.ADMIN_EMAIL ?? null;
+    const passwordHash = await hash(adminPassword, 10);
+
+    await prisma.user.upsert({
+      where: { username: adminUsername },
+      update: {
+        name: adminName,
+        passwordHash,
+        email: adminEmail,
+      },
+      create: {
+        username: adminUsername,
+        name: adminName,
+        passwordHash,
+        email: adminEmail,
+      },
+    });
+
+    console.log(`Seed OK — categorías + usuario local ${adminUsername}`);
+    return;
   }
 
-  const adminUsername = process.env.ADMIN_USERNAME ?? "admin";
-  const adminPassword = process.env.ADMIN_PASSWORD ?? "admin123";
-  const adminName = process.env.ADMIN_NAME ?? "Operador Sistemas";
-  const adminEmail = process.env.ADMIN_EMAIL ?? "admin@sistemas.local";
-
-  await upsertUser({
-    username: adminUsername,
-    name: adminName,
-    password: adminPassword,
-    email: adminEmail,
-  });
-
   console.log(
-    `Seed OK — usuarios: ${officeUsers.map((u) => u.username).join(", ")}, ${adminUsername}`,
+    "Seed OK — categorías. Login vía Active Directory (grupo GG_Sistemas).",
   );
 }
 

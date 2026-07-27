@@ -13,7 +13,7 @@ export default function LoginPage() {
           Stock Sistemas
         </p>
         <p className="mt-1 text-sm text-muted">
-          Ingresá con tu usuario de la oficina
+          Ingresá con tu usuario de Active Directory (grupo GG_Sistemas)
         </p>
         <form action={formAction} className="mt-6 space-y-4">
           <div>
@@ -27,7 +27,6 @@ export default function LoginPage() {
               required
               autoComplete="username"
               className="input"
-              placeholder="ej. nsosa"
             />
           </div>
           <div>

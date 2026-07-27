@@ -25,8 +25,12 @@ COPY --from=builder /app/.next ./.next
 COPY --from=builder /app/public ./public
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/next.config.ts ./
+COPY --from=builder /app/ldaps-certificados-publicos.pem /app/certs/ldaps-certificados-publicos.pem
 COPY docker/entrypoint.sh /entrypoint.sh
 RUN chmod +x /entrypoint.sh
+
+ENV NODE_EXTRA_CA_CERTS=/app/certs/ldaps-certificados-publicos.pem
+ENV LDAP_TLS_CA_FILE=/app/certs/ldaps-certificados-publicos.pem
 
 EXPOSE 3000
 ENTRYPOINT ["/entrypoint.sh"]

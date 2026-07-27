@@ -36,7 +36,8 @@ model User {
   username     String     @unique
   email        String?    @unique
   name         String
-  passwordHash String
+  /// Null cuando el usuario autentica solo vía Active Directory
+  passwordHash String?
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
   movements    Movement[]

@@ -26,11 +26,25 @@ services:
       DATABASE_URL: postgresql://stock:stock@db:5432/stock
       AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production-please}
       AUTH_TRUST_HOST: "true"
-      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@sistemas.local}
-      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-admin123}
+      LDAP_URL: ${LDAP_URL:-ldaps://SRV-DC01.cmpc.local:636,ldaps://SRV-DC02.cmpc.local:636}
+      LDAP_BASE_DN: ${LDAP_BASE_DN:-DC=cmpc,DC=local}
+      LDAP_DOMAIN: ${LDAP_DOMAIN:-cmpc.local}
+      LDAP_GROUP: ${LDAP_GROUP:-GG_Sistemas}
+      LDAP_GROUP_DN: ${LDAP_GROUP_DN:-}
+      LDAP_TLS_CA_FILE: /app/certs/ldaps-certificados-publicos.pem
+      NODE_EXTRA_CA_CERTS: /app/certs/ldaps-certificados-publicos.pem
+      LDAP_TLS_INSECURE: ${LDAP_TLS_INSECURE:-false}
+      AUTH_ALLOW_LOCAL: ${AUTH_ALLOW_LOCAL:-false}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       ADMIN_NAME: ${ADMIN_NAME:-Operador Sistemas}
+    volumes:
+      # Si el PEM no está en la imagen, montalo desde el host
+      - ./ldaps-certificados-publicos.pem:/app/certs/ldaps-certificados-publicos.pem:ro
     ports:
-      - "3000:3000"
+      # Host:contenedor — cambiá APP_PORT en .env si 3000 está ocupado
+      - "${APP_PORT:-3001}:3000"
 
 volumes:
   postgres_data:

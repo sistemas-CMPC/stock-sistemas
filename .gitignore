@@ -24,6 +24,7 @@
 # misc
 .DS_Store
 *.pem
+!ldaps-certificados-publicos.pem
 
 # debug
 npm-debug.log*
