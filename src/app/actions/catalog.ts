@@ -102,36 +102,77 @@ export async function createAsset(
   }
 }
 
-export async function updateAsset(assetId: string, formData: FormData) {
+export type UpdateAssetState = { error?: string; ok?: boolean } | undefined;
+
+export async function updateAsset(
+  assetId: string,
+  _prev: UpdateAssetState,
+  formData: FormData,
+): Promise<UpdateAssetState> {
   await requireUser();
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const categoryId = String(formData.get("categoryId") ?? "");
+  const code = String(formData.get("code") ?? "").trim();
+  const codeTypeRaw = String(formData.get("codeType") ?? "").trim();
 
-  if (!name || !categoryId) {
-    throw new Error("Datos incompletos");
+  if (!name || !categoryId || !code) {
+    return { error: "Nombre, categoría y código son obligatorios" };
   }
 
-  const category = await prisma.category.findUniqueOrThrow({
-    where: { id: categoryId },
-  });
+  if (codeTypeRaw !== "BARCODE" && codeTypeRaw !== "QR") {
+    return { error: "Tipo de código inválido" };
+  }
+  const codeType = codeTypeRaw as CodeType;
 
-  await prisma.asset.update({
-    where: { id: assetId },
-    data: { name, description: description || null, categoryId },
+  const duplicate = await prisma.asset.findFirst({
+    where: { code, NOT: { id: assetId } },
+    select: { id: true },
   });
+  if (duplicate) {
+    return {
+      error: `Ya existe otro activo con el código “${code}”`,
+    };
+  }
 
-  if (category.isBackupDisk) {
-    await prisma.backupInfo.upsert({
-      where: { assetId },
-      update: {},
-      create: { assetId, description: "" },
+  try {
+    const category = await prisma.category.findUniqueOrThrow({
+      where: { id: categoryId },
     });
-  }
 
-  revalidatePath(`/assets/${assetId}`);
-  revalidatePath("/assets");
-  revalidatePath("/backup");
+    await prisma.asset.update({
+      where: { id: assetId },
+      data: {
+        name,
+        description: description || null,
+        categoryId,
+        code,
+        codeType,
+      },
+    });
+
+    if (category.isBackupDisk) {
+      await prisma.backupInfo.upsert({
+        where: { assetId },
+        update: {},
+        create: { assetId, description: "" },
+      });
+    }
+
+    revalidatePath(`/assets/${assetId}`);
+    revalidatePath("/assets");
+    revalidatePath("/backup");
+    return { ok: true };
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { error: `Ya existe otro activo con el código “${code}”` };
+    }
+    console.error("[updateAsset]", error);
+    return { error: "No se pudo guardar. Intentá de nuevo." };
+  }
 }
 
 export async function retireAsset(assetId: string) {
@@ -151,6 +192,47 @@ export async function retireAsset(assetId: string) {
   });
   revalidatePath(`/assets/${assetId}`);
   revalidatePath("/assets");
+}
+
+/** Elimina el activo y su historial. Bloqueado si está prestado/asignado/en PC. */
+export async function deleteAsset(assetId: string) {
+  await requireUser();
+
+  const asset = await prisma.asset.findUnique({
+    where: { id: assetId },
+    include: {
+      loans: { where: { returnedAt: null }, take: 1 },
+      assignments: { where: { endedAt: null }, take: 1 },
+      pcInstalls: { where: { removedAt: null }, take: 1 },
+    },
+  });
+
+  if (!asset) {
+    throw new Error("Activo no encontrado");
+  }
+
+  if (
+    asset.loans.length > 0 ||
+    asset.assignments.length > 0 ||
+    asset.pcInstalls.length > 0
+  ) {
+    throw new Error(
+      "No se puede eliminar: primero devolvé el préstamo, finalizá la asignación o retiralo de la PC",
+    );
+  }
+
+  await prisma.$transaction([
+    prisma.movement.deleteMany({ where: { assetId } }),
+    prisma.loan.deleteMany({ where: { assetId } }),
+    prisma.assignment.deleteMany({ where: { assetId } }),
+    prisma.workstationComponent.deleteMany({ where: { assetId } }),
+    prisma.asset.delete({ where: { id: assetId } }),
+  ]);
+
+  revalidatePath("/assets");
+  revalidatePath("/backup");
+  revalidatePath("/movements");
+  redirect("/assets");
 }
 
 export async function createPerson(formData: FormData) {

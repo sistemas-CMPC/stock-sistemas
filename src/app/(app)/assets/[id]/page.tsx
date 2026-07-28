@@ -3,14 +3,16 @@ import { notFound } from "next/navigation";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { AssetLabel } from "@/components/asset-label";
+import { DeleteAssetButton } from "@/components/delete-asset-button";
+import { EditAssetForm } from "@/components/edit-asset-form";
 import { StatusBadge } from "@/components/status-badge";
 import {
   endAssignment,
   returnLoan,
 } from "@/app/actions/movements";
-import { retireAsset, updateAsset, updateBackupInfo } from "@/app/actions/catalog";
+import { retireAsset, updateBackupInfo } from "@/app/actions/catalog";
 import { removeComponent } from "@/app/actions/workstations";
-import { CODE_TYPE_LABELS, MOVEMENT_TYPE_LABELS } from "@/lib/labels";
+import { MOVEMENT_TYPE_LABELS } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 
 type Props = { params: Promise<{ id: string }> };
@@ -54,6 +56,7 @@ export default async function AssetDetailPage({ params }: Props) {
   const activeLoan = asset.loans.find((loan) => !loan.returnedAt);
   const activeAssignment = asset.assignments.find((item) => !item.endedAt);
   const activePcInstall = asset.pcInstalls[0];
+  const canDelete = !activeLoan && !activeAssignment && !activePcInstall;
 
   return (
     <div className="space-y-6">
@@ -98,6 +101,9 @@ export default async function AssetDetailPage({ params }: Props) {
               </button>
             </form>
           ) : null}
+          {canDelete ? (
+            <DeleteAssetButton assetId={asset.id} assetName={asset.name} />
+          ) : null}
         </div>
       </div>
 
@@ -108,38 +114,15 @@ export default async function AssetDetailPage({ params }: Props) {
           name={asset.name}
         />
 
-        <form action={updateAsset.bind(null, asset.id)} className="card space-y-4">
-          <h2 className="text-lg font-semibold">Editar</h2>
-          <div>
-            <label className="label">Nombre</label>
-            <input name="name" className="input" defaultValue={asset.name} required />
-          </div>
-          <div>
-            <label className="label">Descripción</label>
-            <textarea
-              name="description"
-              className="input"
-              rows={3}
-              defaultValue={asset.description ?? ""}
-            />
-          </div>
-          <div>
-            <label className="label">Categoría</label>
-            <select name="categoryId" className="input" defaultValue={asset.categoryId}>
-              {categories.map((category) => (
-                <option key={category.id} value={category.id}>
-                  {category.name}
-                </option>
-              ))}
-            </select>
-          </div>
-          <p className="text-xs text-muted">
-            Tipo de código: {CODE_TYPE_LABELS[asset.codeType]} (no editable)
-          </p>
-          <button type="submit" className="btn-secondary">
-            Guardar cambios
-          </button>
-        </form>
+        <EditAssetForm
+          assetId={asset.id}
+          name={asset.name}
+          description={asset.description}
+          categoryId={asset.categoryId}
+          code={asset.code}
+          codeType={asset.codeType}
+          categories={categories}
+        />
       </div>
 
       {asset.category.isBackupDisk || asset.backupInfo ? (
