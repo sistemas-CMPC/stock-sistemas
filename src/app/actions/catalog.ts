@@ -1,8 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
-import { CodeType } from "@prisma/client";
+import { redirect, unstable_rethrow } from "next/navigation";
+import { CodeType, Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
@@ -17,16 +17,27 @@ const assetSchema = z.object({
   generateCode: z.string().optional(),
 });
 
-export async function createAsset(formData: FormData) {
+export type CreateAssetState = { error?: string } | undefined;
+
+export async function createAsset(
+  _prev: CreateAssetState,
+  formData: FormData,
+): Promise<CreateAssetState> {
   const user = await requireUser();
-  const parsed = assetSchema.parse({
-    name: formData.get("name"),
-    description: formData.get("description") || undefined,
-    categoryId: formData.get("categoryId"),
-    codeType: formData.get("codeType"),
-    code: formData.get("code") || undefined,
-    generateCode: formData.get("generateCode") || undefined,
-  });
+
+  let parsed;
+  try {
+    parsed = assetSchema.parse({
+      name: formData.get("name"),
+      description: formData.get("description") || undefined,
+      categoryId: formData.get("categoryId"),
+      codeType: formData.get("codeType"),
+      code: formData.get("code") || undefined,
+      generateCode: formData.get("generateCode") || undefined,
+    });
+  } catch {
+    return { error: "Completá los datos obligatorios del activo" };
+  }
 
   const existingCode = parsed.code?.trim();
   let code = existingCode;
@@ -34,37 +45,61 @@ export async function createAsset(formData: FormData) {
     if (parsed.generateCode === "on") {
       code = generateAssetCode(parsed.codeType === "QR" ? "QR" : "BC");
     } else {
-      throw new Error("Indicá un código o activá la generación automática");
+      return { error: "Indicá un código o activá la generación automática" };
     }
   }
 
-  const category = await prisma.category.findUniqueOrThrow({
-    where: { id: parsed.categoryId },
+  const alreadyExists = await prisma.asset.findUnique({
+    where: { code },
+    select: { id: true },
   });
+  if (alreadyExists) {
+    return {
+      error: `Ya existe un activo con el código “${code}”. Buscalo en Activos o usá otro código.`,
+    };
+  }
 
-  const asset = await prisma.asset.create({
-    data: {
-      name: parsed.name,
-      description: parsed.description,
-      categoryId: parsed.categoryId,
-      code,
-      codeType: parsed.codeType as CodeType,
-      backupInfo: category.isBackupDisk
-        ? { create: { description: "" } }
-        : undefined,
-      movements: {
-        create: {
-          type: "ALTA",
-          userId: user.id!,
-          note: "Alta de activo",
+  try {
+    const category = await prisma.category.findUniqueOrThrow({
+      where: { id: parsed.categoryId },
+    });
+
+    const asset = await prisma.asset.create({
+      data: {
+        name: parsed.name,
+        description: parsed.description,
+        categoryId: parsed.categoryId,
+        code,
+        codeType: parsed.codeType as CodeType,
+        backupInfo: category.isBackupDisk
+          ? { create: { description: "" } }
+          : undefined,
+        movements: {
+          create: {
+            type: "ALTA",
+            userId: user.id!,
+            note: "Alta de activo",
+          },
         },
       },
-    },
-  });
+    });
 
-  revalidatePath("/assets");
-  revalidatePath("/backup");
-  redirect(`/assets/${asset.id}`);
+    revalidatePath("/assets");
+    revalidatePath("/backup");
+    redirect(`/assets/${asset.id}`);
+  } catch (error) {
+    unstable_rethrow(error);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return {
+        error: `Ya existe un activo con el código “${code}”. Buscalo en Activos o usá otro código.`,
+      };
+    }
+    console.error("[createAsset]", error);
+    return { error: "No se pudo registrar el activo. Intentá de nuevo." };
+  }
 }
 
 export async function updateAsset(assetId: string, formData: FormData) {
