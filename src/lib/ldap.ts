@@ -13,6 +13,13 @@ export type AdUser = {
   email: string | null;
 };
 
+export type AdPerson = {
+  username: string;
+  name: string;
+  area: string | null;
+  active: boolean;
+};
+
 export type LdapAuthFailureReason =
   | "invalid_credentials"
   | "not_in_group"
@@ -21,6 +28,17 @@ export type LdapAuthFailureReason =
 export type LdapAuthResult =
   | { ok: true; user: AdUser }
   | { ok: false; reason: LdapAuthFailureReason; detail?: string };
+
+/** Bit ADS_UF_ACCOUNTDISABLE en userAccountControl */
+const AD_ACCOUNTDISABLE = 2;
+
+const BUILTIN_EXCLUDED = new Set([
+  "krbtgt",
+  "guest",
+  "administrator",
+  "defaultaccount",
+  "wdagutilityaccount",
+]);
 
 const LDAP_MATCHING_RULE_IN_CHAIN = "1.2.840.113556.1.4.1941";
 
@@ -133,6 +151,12 @@ export function isLdapConfigured(): boolean {
   return Boolean(process.env.LDAP_URL?.trim());
 }
 
+export function isLdapBindConfigured(): boolean {
+  return Boolean(
+    process.env.LDAP_BIND_USER?.trim() && process.env.LDAP_BIND_PASSWORD,
+  );
+}
+
 function isInvalidCredentialsError(error: unknown): boolean {
   if (error instanceof InvalidCredentialsError) return true;
   const message = error instanceof Error ? error.message : String(error);
@@ -211,11 +235,13 @@ async function bindWithFallbacks(
   password: string,
   domain: string,
 ): Promise<void> {
-  const netbios = netbiosDomain(domain);
-  const candidates = [
-    `${username}@${domain}`,
-    `${netbios}\\${username}`,
-  ];
+  const candidates: string[] = [];
+  if (username.includes("@") || username.includes("\\")) {
+    candidates.push(username);
+  } else {
+    const netbios = netbiosDomain(domain);
+    candidates.push(`${username}@${domain}`, `${netbios}\\${username}`);
+  }
 
   let lastError: unknown;
   for (const dn of candidates) {
@@ -230,6 +256,141 @@ async function bindWithFallbacks(
   throw lastError;
 }
 
+function createLdapClient(url: string): Client {
+  const hostname = hostnameFromLdapUrl(url);
+  const tlsOptions = loadTlsOptions(hostname);
+  const isLdaps = url.toLowerCase().startsWith("ldaps://");
+
+  return new Client({
+    url,
+    timeout: 60_000,
+    connectTimeout: 15_000,
+    tlsOptions: isLdaps ? tlsOptions : undefined,
+  });
+}
+
+async function prepareClient(url: string): Promise<Client> {
+  const client = createLdapClient(url);
+  const wantsStartTls =
+    !url.toLowerCase().startsWith("ldaps://") &&
+    process.env.LDAP_START_TLS === "true";
+  if (wantsStartTls) {
+    await client.startTLS(loadTlsOptions(hostnameFromLdapUrl(url)));
+  }
+  return client;
+}
+
+function shouldImportAdAccount(username: string): boolean {
+  const lower = username.toLowerCase();
+  if (BUILTIN_EXCLUDED.has(lower)) return false;
+  if (lower.startsWith("svc")) return false;
+  return true;
+}
+
+function entryToAdPerson(entry: Entry): AdPerson | null {
+  const sam = firstAttr(entry, "sAMAccountName");
+  if (!sam || !shouldImportAdAccount(sam)) return null;
+
+  const uacRaw = firstAttr(entry, "userAccountControl");
+  const uac = uacRaw ? Number.parseInt(uacRaw, 10) : 0;
+  const disabled =
+    Number.isFinite(uac) && (uac & AD_ACCOUNTDISABLE) === AD_ACCOUNTDISABLE;
+
+  const name =
+    firstAttr(entry, "displayName") ||
+    firstAttr(entry, "cn") ||
+    sam;
+  const department = firstAttr(entry, "department")?.trim() || null;
+
+  return {
+    username: sam.toLowerCase(),
+    name,
+    area: department,
+    active: !disabled,
+  };
+}
+
+async function listAdPeopleAgainstUrl(url: string): Promise<AdPerson[]> {
+  const baseDn =
+    process.env.LDAP_USERS_BASE_DN?.trim() || requiredEnv("LDAP_BASE_DN");
+  const domain = requiredEnv("LDAP_DOMAIN");
+  const bindUser = requiredEnv("LDAP_BIND_USER");
+  const bindPassword = process.env.LDAP_BIND_PASSWORD ?? "";
+
+  const client = await prepareClient(url);
+
+  try {
+    const bindIdentity =
+      bindUser.includes("@") || bindUser.includes("\\")
+        ? bindUser
+        : normalizeAdUsername(bindUser);
+
+    await bindWithFallbacks(client, bindIdentity, bindPassword, domain);
+
+    // Usuarios de persona; svc*/built-in se filtran en entryToAdPerson.
+    // Incluye deshabilitados para poder marcar active=false en re-sync.
+    const filter =
+      "(&(objectCategory=person)(objectClass=user)(!(sAMAccountName=krbtgt)))";
+
+    const people: AdPerson[] = [];
+    const paginator = client.searchPaginated(baseDn, {
+      scope: "sub",
+      filter,
+      attributes: [
+        "sAMAccountName",
+        "displayName",
+        "cn",
+        "department",
+        "userAccountControl",
+      ],
+      paged: { pageSize: 500 },
+    });
+
+    for await (const page of paginator) {
+      for (const entry of page.searchEntries) {
+        const person = entryToAdPerson(entry);
+        if (person) people.push(person);
+      }
+    }
+
+    return people;
+  } finally {
+    try {
+      await client.unbind();
+    } catch {
+      // ignore
+    }
+  }
+}
+
+/** Lista usuarios de AD (habilitados y deshabilitados) excluyendo cuentas svc* y built-in. */
+export async function listAdPeople(): Promise<AdPerson[]> {
+  if (!isLdapConfigured()) {
+    throw new Error("LDAP_URL no está configurado");
+  }
+  if (!isLdapBindConfigured()) {
+    throw new Error(
+      "Configurá LDAP_BIND_USER y LDAP_BIND_PASSWORD para sincronizar desde AD",
+    );
+  }
+
+  const urls = ldapUrls();
+  let lastError: unknown;
+
+  for (const url of urls) {
+    try {
+      return await listAdPeopleAgainstUrl(url);
+    } catch (error) {
+      lastError = error;
+      console.error(`[ldap] listAdPeople falló en ${url}:`, error);
+    }
+  }
+
+  throw lastError instanceof Error
+    ? lastError
+    : new Error("No se pudo listar usuarios de Active Directory");
+}
+
 async function authenticateAgainstUrl(
   url: string,
   username: string,
@@ -239,24 +400,10 @@ async function authenticateAgainstUrl(
   const domain = requiredEnv("LDAP_DOMAIN");
   const groupName = process.env.LDAP_GROUP?.trim() || "GG_Sistemas";
   const configuredGroupDn = process.env.LDAP_GROUP_DN?.trim();
-  const hostname = hostnameFromLdapUrl(url);
-  const tlsOptions = loadTlsOptions(hostname);
-  const isLdaps = url.toLowerCase().startsWith("ldaps://");
-  const wantsStartTls =
-    !isLdaps && process.env.LDAP_START_TLS === "true";
 
-  const client = new Client({
-    url,
-    timeout: 15_000,
-    connectTimeout: 10_000,
-    tlsOptions: isLdaps ? tlsOptions : undefined,
-  });
+  const client = await prepareClient(url);
 
   try {
-    if (wantsStartTls) {
-      await client.startTLS(tlsOptions);
-    }
-
     await bindWithFallbacks(client, username, password, domain);
 
     const { searchEntries: users } = await client.search(baseDn, {

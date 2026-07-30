@@ -54,6 +54,8 @@ model Category {
 
 model Person {
   id           String        @id @default(cuid())
+  /// sAMAccountName de AD (clave de sync); null si se cargó a mano
+  username     String?       @unique
   name         String
   area         String?
   active       Boolean       @default(true)

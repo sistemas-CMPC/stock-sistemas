@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { createPerson, updatePerson } from "@/app/actions/catalog";
+import { SyncPeopleFromAdButton } from "@/components/sync-people-button";
 import { prisma } from "@/lib/prisma";
 
 export default async function PeoplePage() {
@@ -13,9 +14,14 @@ export default async function PeoplePage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Personas</h1>
-        <p className="text-muted">Compañeros a quienes se presta o asigna material</p>
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Personas</h1>
+          <p className="text-muted">
+            Compañeros a quienes se presta o asigna material
+          </p>
+        </div>
+        <SyncPeopleFromAdButton />
       </div>
 
       <form action={createPerson} className="card grid gap-3 sm:grid-cols-3">
@@ -39,6 +45,7 @@ export default async function PeoplePage() {
           <thead>
             <tr>
               <th>Nombre</th>
+              <th>Usuario AD</th>
               <th>Área</th>
               <th>Activo</th>
               <th>En préstamo / asignado</th>
@@ -53,6 +60,9 @@ export default async function PeoplePage() {
                     {person.name}
                   </Link>
                 </td>
+                <td className="font-mono text-xs text-muted">
+                  {person.username ?? "—"}
+                </td>
                 <td>{person.area ?? "—"}</td>
                 <td>{person.active ? "Sí" : "No"}</td>
                 <td>
@@ -63,11 +73,7 @@ export default async function PeoplePage() {
                     action={updatePerson.bind(null, person.id)}
                     className="flex flex-wrap items-end gap-2"
                   >
-                    <input
-                      type="hidden"
-                      name="name"
-                      value={person.name}
-                    />
+                    <input type="hidden" name="name" value={person.name} />
                     <input type="hidden" name="area" value={person.area ?? ""} />
                     <label className="flex items-center gap-1 text-xs">
                       <input

@@ -38,6 +38,9 @@ services:
       LDAP_TLS_CA_FILE: /app/certs/ldaps-certificados-publicos.pem
       NODE_EXTRA_CA_CERTS: /app/certs/ldaps-certificados-publicos.pem
       LDAP_TLS_INSECURE: ${LDAP_TLS_INSECURE:-false}
+      LDAP_BIND_USER: ${LDAP_BIND_USER:-}
+      LDAP_BIND_PASSWORD: ${LDAP_BIND_PASSWORD:-}
+      LDAP_USERS_BASE_DN: ${LDAP_USERS_BASE_DN:-}
       AUTH_ALLOW_LOCAL: ${AUTH_ALLOW_LOCAL:-false}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
