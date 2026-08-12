@@ -1,36 +1,73 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { redirect, unstable_rethrow } from "next/navigation";
+import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
-export async function createWorkstation(formData: FormData) {
+export type CreateWorkstationState = { error?: string } | undefined;
+export type UpdateWorkstationState = { error?: string; ok?: boolean } | undefined;
+
+function duplicateNameMessage(name: string) {
+  return `Ya existe una estación con el nombre “${name}”. Elegí otro nombre o editá la existente.`;
+}
+
+async function findDuplicateWorkstationName(name: string, excludeId?: string) {
+  return prisma.workstation.findFirst({
+    where: excludeId ? { name, NOT: { id: excludeId } } : { name },
+    select: { id: true },
+  });
+}
+
+export async function createWorkstation(
+  _prev: CreateWorkstationState,
+  formData: FormData,
+): Promise<CreateWorkstationState> {
   await requireUser();
   const name = String(formData.get("name") ?? "").trim();
   const ipAddress = String(formData.get("ipAddress") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();
   const personId = String(formData.get("personId") ?? "").trim();
 
-  if (!name) throw new Error("El nombre de la PC es obligatorio");
+  if (!name) {
+    return { error: "El nombre de la PC es obligatorio" };
+  }
 
-  const workstation = await prisma.workstation.create({
-    data: {
-      name,
-      ipAddress: ipAddress || null,
-      notes: notes || null,
-      personId: personId || null,
-    },
-  });
+  if (await findDuplicateWorkstationName(name)) {
+    return { error: duplicateNameMessage(name) };
+  }
 
-  revalidatePath("/workstations");
-  redirect(`/workstations/${workstation.id}`);
+  try {
+    const workstation = await prisma.workstation.create({
+      data: {
+        name,
+        ipAddress: ipAddress || null,
+        notes: notes || null,
+        personId: personId || null,
+      },
+    });
+
+    revalidatePath("/workstations");
+    redirect(`/workstations/${workstation.id}`);
+  } catch (error) {
+    unstable_rethrow(error);
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { error: duplicateNameMessage(name) };
+    }
+    console.error("[createWorkstation]", error);
+    return { error: "No se pudo crear la estación. Intentá de nuevo." };
+  }
 }
 
 export async function updateWorkstation(
   workstationId: string,
+  _prev: UpdateWorkstationState,
   formData: FormData,
-) {
+): Promise<UpdateWorkstationState> {
   await requireUser();
   const name = String(formData.get("name") ?? "").trim();
   const ipAddress = String(formData.get("ipAddress") ?? "").trim();
@@ -38,21 +75,39 @@ export async function updateWorkstation(
   const personId = String(formData.get("personId") ?? "").trim();
   const active = formData.get("active") === "on";
 
-  if (!name) throw new Error("El nombre de la PC es obligatorio");
+  if (!name) {
+    return { error: "El nombre de la PC es obligatorio" };
+  }
 
-  await prisma.workstation.update({
-    where: { id: workstationId },
-    data: {
-      name,
-      ipAddress: ipAddress || null,
-      notes: notes || null,
-      personId: personId || null,
-      active,
-    },
-  });
+  if (await findDuplicateWorkstationName(name, workstationId)) {
+    return { error: duplicateNameMessage(name) };
+  }
 
-  revalidatePath("/workstations");
-  revalidatePath(`/workstations/${workstationId}`);
+  try {
+    await prisma.workstation.update({
+      where: { id: workstationId },
+      data: {
+        name,
+        ipAddress: ipAddress || null,
+        notes: notes || null,
+        personId: personId || null,
+        active,
+      },
+    });
+
+    revalidatePath("/workstations");
+    revalidatePath(`/workstations/${workstationId}`);
+    return { ok: true };
+  } catch (error) {
+    if (
+      error instanceof Prisma.PrismaClientKnownRequestError &&
+      error.code === "P2002"
+    ) {
+      return { error: duplicateNameMessage(name) };
+    }
+    console.error("[updateWorkstation]", error);
+    return { error: "No se pudo guardar. Intentá de nuevo." };
+  }
 }
 
 export async function installComponentByCode(

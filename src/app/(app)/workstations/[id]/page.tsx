@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { updateWorkstation } from "@/app/actions/workstations";
+import { EditWorkstationForm } from "@/components/edit-workstation-form";
 import { WorkstationComponents } from "@/components/workstation-components";
 import { prisma } from "@/lib/prisma";
 
@@ -45,61 +45,15 @@ export default async function WorkstationDetailPage({ params }: Props) {
         </p>
       </div>
 
-      <form
-        action={updateWorkstation.bind(null, workstation.id)}
-        className="card grid gap-3 md:grid-cols-2"
-      >
-        <div>
-          <label className="label">Nombre de la PC</label>
-          <input
-            name="name"
-            required
-            className="input"
-            defaultValue={workstation.name}
-          />
-        </div>
-        <div>
-          <label className="label">IP</label>
-          <input
-            name="ipAddress"
-            className="input font-mono"
-            defaultValue={workstation.ipAddress ?? ""}
-          />
-        </div>
-        <div>
-          <label className="label">Quién la tiene</label>
-          <select
-            name="personId"
-            className="input"
-            defaultValue={workstation.personId ?? ""}
-          >
-            <option value="">Sin asignar</option>
-            {people.map((person) => (
-              <option key={person.id} value={person.id}>
-                {person.name}
-                {person.area ? ` (${person.area})` : ""}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="label">Notas</label>
-          <input
-            name="notes"
-            className="input"
-            defaultValue={workstation.notes ?? ""}
-          />
-        </div>
-        <label className="flex items-center gap-2 text-sm md:col-span-2">
-          <input type="checkbox" name="active" defaultChecked={workstation.active} />
-          Estación activa
-        </label>
-        <div className="md:col-span-2">
-          <button type="submit" className="btn-secondary">
-            Guardar cambios
-          </button>
-        </div>
-      </form>
+      <EditWorkstationForm
+        workstationId={workstation.id}
+        name={workstation.name}
+        ipAddress={workstation.ipAddress}
+        notes={workstation.notes}
+        personId={workstation.personId}
+        active={workstation.active}
+        people={people}
+      />
 
       <WorkstationComponents
         workstationId={workstation.id}
