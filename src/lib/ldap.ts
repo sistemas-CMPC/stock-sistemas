@@ -1,11 +1,15 @@
-import { existsSync, readFileSync } from "node:fs";
-import { resolve } from "node:path";
 import {
   Client,
   escapeFilter,
   InvalidCredentialsError,
   type Entry,
 } from "ldapts";
+import {
+  assertSecureLdapConfig,
+  describeLdapTlsFailure,
+  parseLdapUrlList,
+  readMandatoryLdapCa,
+} from "@/lib/ldap-policy";
 
 export type AdUser = {
   username: string;
@@ -51,47 +55,13 @@ function requiredEnv(name: string): string {
 }
 
 function ldapUrls(): string[] {
-  return requiredEnv("LDAP_URL")
-    .split(",")
-    .map((url) => url.trim())
-    .filter(Boolean);
+  return parseLdapUrlList(requiredEnv("LDAP_URL"));
 }
 
 function netbiosDomain(dnsDomain: string): string {
   const configured = process.env.LDAP_NETBIOS?.trim();
   if (configured) return configured;
   return (dnsDomain.split(".")[0] ?? dnsDomain).toUpperCase();
-}
-
-function loadTlsOptions(servername?: string): {
-  ca?: Buffer[];
-  rejectUnauthorized: boolean;
-  servername?: string;
-  minVersion?: "TLSv1.2";
-} {
-  const insecure = process.env.LDAP_TLS_INSECURE === "true";
-  const caFile = process.env.LDAP_TLS_CA_FILE?.trim();
-  const resolved = caFile ? resolve(caFile) : null;
-
-  const options: {
-    ca?: Buffer[];
-    rejectUnauthorized: boolean;
-    servername?: string;
-    minVersion?: "TLSv1.2";
-  } = {
-    rejectUnauthorized: !insecure,
-    ...(servername ? { servername } : {}),
-    ...(insecure ? {} : { minVersion: "TLSv1.2" as const }),
-  };
-
-  // Con insecure no inyectamos CA custom: a veces leaf certs rompen el handshake
-  if (!insecure && resolved && existsSync(resolved)) {
-    options.ca = [readFileSync(resolved)];
-  } else if (caFile && !existsSync(resolved!)) {
-    console.warn(`[ldap] No se encontró el certificado en ${resolved}`);
-  }
-
-  return options;
 }
 
 function hostnameFromLdapUrl(url: string): string | undefined {
@@ -210,7 +180,10 @@ async function isMemberOfGroup(
     });
     if (searchEntries.length > 0) return true;
   } catch (error) {
-    console.warn("[ldap] Falló chequeo member IN_CHAIN sobre el grupo:", error);
+    console.warn(
+      "[ldap] Falló chequeo member IN_CHAIN sobre el grupo:",
+      describeLdapTlsFailure(error),
+    );
   }
 
   // Alternativa: filtro sobre el usuario
@@ -223,7 +196,10 @@ async function isMemberOfGroup(
     });
     if (searchEntries.length > 0) return true;
   } catch (error) {
-    console.warn("[ldap] Falló chequeo memberOf IN_CHAIN sobre el usuario:", error);
+    console.warn(
+      "[ldap] Falló chequeo memberOf IN_CHAIN sobre el usuario:",
+      describeLdapTlsFailure(error),
+    );
   }
 
   return false;
@@ -257,27 +233,30 @@ async function bindWithFallbacks(
 }
 
 function createLdapClient(url: string): Client {
+  if (!url.toLowerCase().startsWith("ldaps://")) {
+    throw new Error(
+      `Refused unencrypted LDAP URL: ${url}. Solo se permite ldaps://:636.`,
+    );
+  }
+
   const hostname = hostnameFromLdapUrl(url);
-  const tlsOptions = loadTlsOptions(hostname);
-  const isLdaps = url.toLowerCase().startsWith("ldaps://");
+  const ca = readMandatoryLdapCa();
 
   return new Client({
     url,
     timeout: 60_000,
     connectTimeout: 15_000,
-    tlsOptions: isLdaps ? tlsOptions : undefined,
+    tlsOptions: {
+      ca: [ca],
+      rejectUnauthorized: true,
+      servername: hostname,
+      minVersion: "TLSv1.2",
+    },
   });
 }
 
 async function prepareClient(url: string): Promise<Client> {
-  const client = createLdapClient(url);
-  const wantsStartTls =
-    !url.toLowerCase().startsWith("ldaps://") &&
-    process.env.LDAP_START_TLS === "true";
-  if (wantsStartTls) {
-    await client.startTLS(loadTlsOptions(hostnameFromLdapUrl(url)));
-  }
-  return client;
+  return createLdapClient(url);
 }
 
 function shouldImportAdAccount(username: string): boolean {
@@ -365,6 +344,7 @@ async function listAdPeopleAgainstUrl(url: string): Promise<AdPerson[]> {
 
 /** Lista usuarios de AD (habilitados y deshabilitados) excluyendo cuentas svc* y built-in. */
 export async function listAdPeople(): Promise<AdPerson[]> {
+  assertSecureLdapConfig();
   if (!isLdapConfigured()) {
     throw new Error("LDAP_URL no está configurado");
   }
@@ -382,12 +362,15 @@ export async function listAdPeople(): Promise<AdPerson[]> {
       return await listAdPeopleAgainstUrl(url);
     } catch (error) {
       lastError = error;
-      console.error(`[ldap] listAdPeople falló en ${url}:`, error);
+      console.error(
+        `[ldap] listAdPeople falló en ${url}:`,
+        describeLdapTlsFailure(error),
+      );
     }
   }
 
   throw lastError instanceof Error
-    ? lastError
+    ? new Error(describeLdapTlsFailure(lastError))
     : new Error("No se pudo listar usuarios de Active Directory");
 }
 
@@ -464,7 +447,7 @@ async function authenticateAgainstUrl(
     if (isInvalidCredentialsError(error)) {
       return { ok: false, reason: "invalid_credentials" };
     }
-    const detail = error instanceof Error ? error.message : String(error);
+    const detail = describeLdapTlsFailure(error);
     console.error(`[ldap] Error contra ${url}:`, detail);
     return { ok: false, reason: "unavailable", detail };
   } finally {
@@ -481,6 +464,7 @@ export async function authenticateWithAd(
   rawUsername: string,
   password: string,
 ): Promise<LdapAuthResult> {
+  assertSecureLdapConfig();
   const username = normalizeAdUsername(rawUsername);
   if (!username || !password) {
     return { ok: false, reason: "invalid_credentials" };

@@ -3,15 +3,15 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_USER: stock
-      POSTGRES_PASSWORD: stock
-      POSTGRES_DB: stock
+      POSTGRES_USER: ${POSTGRES_USER:?faltan POSTGRES_USER en .env}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?faltan POSTGRES_PASSWORD en .env}
+      POSTGRES_DB: ${POSTGRES_DB:?faltan POSTGRES_DB en .env}
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
       - "5433:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U stock -d stock"]
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -27,8 +27,8 @@ services:
       - "SRV-DC01.cmpc.local:${DC01_IP:?faltan DC01_IP en .env}"
       - "SRV-DC02.cmpc.local:${DC02_IP:?faltan DC02_IP en .env}"
     environment:
-      DATABASE_URL: postgresql://stock:stock@db:5432/stock
-      AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production-please}
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+      AUTH_SECRET: ${AUTH_SECRET:?faltan AUTH_SECRET en .env}
       AUTH_TRUST_HOST: "true"
       LDAP_URL: ${LDAP_URL:-ldaps://SRV-DC01.cmpc.local:636,ldaps://SRV-DC02.cmpc.local:636}
       LDAP_BASE_DN: ${LDAP_BASE_DN:-DC=cmpc,DC=local}
@@ -37,11 +37,9 @@ services:
       LDAP_GROUP_DN: ${LDAP_GROUP_DN:-}
       LDAP_TLS_CA_FILE: /app/certs/ldaps-certificados-publicos.pem
       NODE_EXTRA_CA_CERTS: /app/certs/ldaps-certificados-publicos.pem
-      LDAP_TLS_INSECURE: ${LDAP_TLS_INSECURE:-false}
       LDAP_BIND_USER: ${LDAP_BIND_USER:-}
       LDAP_BIND_PASSWORD: ${LDAP_BIND_PASSWORD:-}
       LDAP_USERS_BASE_DN: ${LDAP_USERS_BASE_DN:-}
-      AUTH_ALLOW_LOCAL: ${AUTH_ALLOW_LOCAL:-false}
       ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
       ADMIN_EMAIL: ${ADMIN_EMAIL:-}
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}

@@ -8,6 +8,7 @@ import {
   isLdapConfigured,
   normalizeAdUsername,
 } from "@/lib/ldap";
+import { describeLdapTlsFailure } from "@/lib/ldap-policy";
 import { prisma } from "@/lib/prisma";
 
 const credentialsSchema = z.object({
@@ -78,6 +79,8 @@ async function authorizeWithLdap(username: string, password: string) {
 }
 
 async function authorizeLocal(username: string, password: string) {
+  if (process.env.NODE_ENV === "production") return null;
+
   const allowLocal =
     !isLdapConfigured() || process.env.AUTH_ALLOW_LOCAL === "true";
   if (!allowLocal) return null;
@@ -117,7 +120,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
             return await authorizeWithLdap(username, password);
           } catch (error) {
             if (error instanceof AdSignInError) throw error;
-            console.error("[auth] Error LDAP:", error);
+            console.error("[auth] Error LDAP:", describeLdapTlsFailure(error));
             throw new AdSignInError("unavailable");
           }
         }

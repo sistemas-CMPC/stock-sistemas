@@ -57,17 +57,26 @@ Credenciales de la oficina (seed):
 | `ebellon` | `ebellon**` |
 | `rpardo` | `rpardo**` |
 
-También queda `admin` / `admin123` (configurable por `.env`).
+También queda `admin` / `admin123` **solo si** `AUTH_ALLOW_LOCAL=true` en desarrollo. En producción esa variable aborta el arranque.
 
 ## Docker (producción / servidor local)
 
 ```bash
 cp .env.example .env
-# Editá AUTH_SECRET y ADMIN_PASSWORD
+# Obligatorio: AUTH_SECRET, POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB,
+# DC01_IP, DC02_IP, LDAP_BIND_USER, LDAP_BIND_PASSWORD
 docker compose up -d --build
 ```
 
-La app queda en el puerto **3000**. Al arrancar aplica migraciones y crea/actualiza el usuario admin.
+La app queda publicada en **APP_PORT** (default 3001). Al arrancar valida la política LDAPS, aplica migraciones y siembra categorías.
+
+Verificación de certificados de los DC:
+
+```bash
+pnpm ldap:verify
+# o, con Compose:
+docker compose exec app pnpm ldap:verify
+```
 
 ## Scripts útiles
 
@@ -78,6 +87,8 @@ La app queda en el puerto **3000**. Al arrancar aplica migraciones y crea/actual
 | `pnpm db:migrate` | Migración en desarrollo |
 | `pnpm db:seed` | Seed categorías + admin |
 | `pnpm db:studio` | Prisma Studio |
+| `pnpm ldap:assert` | Valida política LDAPS (abortar si hay ldap://, IP o TLS inseguro) |
+| `pnpm ldap:verify` | Abre LDAPS a cada DC y reporta CN, thumbprint y vencimiento |
 
 ## Notas de uso con pistola
 

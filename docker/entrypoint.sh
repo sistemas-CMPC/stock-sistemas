@@ -1,6 +1,9 @@
 #!/bin/sh
 set -e
 
+echo "Validating LDAPS policy..."
+pnpm ldap:assert
+
 echo "Applying database migrations..."
 pnpm exec prisma migrate deploy
 

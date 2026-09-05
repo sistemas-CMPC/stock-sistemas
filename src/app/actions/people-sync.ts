@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { listAdPeople, isLdapBindConfigured, isLdapConfigured } from "@/lib/ldap";
+import { describeLdapTlsFailure } from "@/lib/ldap-policy";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
@@ -70,12 +71,10 @@ export async function syncPeopleFromAd(
       total: adPeople.length,
     };
   } catch (error) {
-    console.error("[syncPeopleFromAd]", error);
+    console.error("[syncPeopleFromAd]", describeLdapTlsFailure(error));
     return {
       error:
-        error instanceof Error
-          ? error.message
-          : "No se pudo sincronizar desde Active Directory",
+        "No se pudo sincronizar desde Active Directory. Revisá los logs del servidor.",
     };
   }
 }

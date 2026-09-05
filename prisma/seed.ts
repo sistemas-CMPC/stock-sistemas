@@ -24,7 +24,14 @@ async function main() {
     });
   }
 
-  // Usuario local solo para desarrollo o emergencia (AUTH_ALLOW_LOCAL=true)
+  // Usuario local solo para desarrollo (AUTH_ALLOW_LOCAL=true). Prohibido en producción.
+  if (process.env.NODE_ENV === "production" && process.env.AUTH_ALLOW_LOCAL === "true") {
+    console.error(
+      "AUTH_ALLOW_LOCAL no está permitido en producción. El login debe ir contra Active Directory.",
+    );
+    process.exit(1);
+  }
+
   const allowLocal = process.env.AUTH_ALLOW_LOCAL === "true";
   const adminPassword = process.env.ADMIN_PASSWORD;
 
