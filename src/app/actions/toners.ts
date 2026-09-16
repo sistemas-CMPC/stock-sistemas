@@ -15,10 +15,6 @@ function normalizeBarcode(raw: string) {
   return raw.trim();
 }
 
-function normalizeModel(raw: string) {
-  return raw.trim().replace(/\s+/g, " ");
-}
-
 export async function upsertTonerSku(formData: FormData) {
   await requireUser();
 
@@ -231,18 +227,24 @@ export async function linkTonerToPrinterModel(formData: FormData) {
   await requireUser();
 
   const tonerSkuId = String(formData.get("tonerSkuId") ?? "").trim();
-  const printerModel = normalizeModel(String(formData.get("printerModel") ?? ""));
+  const printerModelId = String(formData.get("printerModelId") ?? "").trim();
 
-  if (!tonerSkuId || !printerModel) {
+  if (!tonerSkuId || !printerModelId) {
     throw new Error("Seleccioná toner y modelo de impresora");
   }
 
+  const model = await prisma.printerModel.findUnique({
+    where: { id: printerModelId },
+    select: { id: true },
+  });
+  if (!model) throw new Error("Modelo de impresora inválido");
+
   await prisma.printerTonerCompat.upsert({
     where: {
-      tonerSkuId_printerModel: { tonerSkuId, printerModel },
+      tonerSkuId_printerModelId: { tonerSkuId, printerModelId },
     },
     update: {},
-    create: { tonerSkuId, printerModel },
+    create: { tonerSkuId, printerModelId },
   });
 
   revalidateToners();
@@ -293,29 +295,33 @@ export async function getTonerCoverage(): Promise<TonerCoverageRow[]> {
 
   const [skus, printers] = await Promise.all([
     prisma.tonerSku.findMany({
-      include: { printers: true },
+      include: {
+        printers: { include: { printerModel: true } },
+      },
       orderBy: { name: "asc" },
     }),
     prisma.printerInfo.findMany({
-      where: { model: { not: null } },
-      select: { model: true, asset: { select: { status: true } } },
+      where: { printerModelId: { not: null } },
+      select: {
+        printerModelId: true,
+        asset: { select: { status: true } },
+      },
     }),
   ]);
 
-  const activeModels = printers
-    .filter((p) => p.asset.status !== "RETIRED" && p.model)
-    .map((p) => normalizeModel(p.model!));
-
-  const countByModel = new Map<string, number>();
-  for (const model of activeModels) {
-    const key = model.toLowerCase();
-    countByModel.set(key, (countByModel.get(key) ?? 0) + 1);
+  const countByModelId = new Map<string, number>();
+  for (const p of printers) {
+    if (p.asset.status === "RETIRED" || !p.printerModelId) continue;
+    countByModelId.set(
+      p.printerModelId,
+      (countByModelId.get(p.printerModelId) ?? 0) + 1,
+    );
   }
 
   return skus.map((sku) => {
-    const printerModels = sku.printers.map((p) => p.printerModel);
-    const printerCount = printerModels.reduce((sum, model) => {
-      return sum + (countByModel.get(model.toLowerCase()) ?? 0);
+    const printerModels = sku.printers.map((p) => p.printerModel.name);
+    const printerCount = sku.printers.reduce((sum, link) => {
+      return sum + (countByModelId.get(link.printerModelId) ?? 0);
     }, 0);
 
     const coverageRatio =
@@ -325,7 +331,10 @@ export async function getTonerCoverage(): Promise<TonerCoverageRow[]> {
     if (printerModels.length === 0) status = "unlinked";
     else if (sku.fullQty === 0 || (printerCount > 0 && sku.fullQty < 1))
       status = "critical";
-    else if (sku.fullQty <= sku.minStock || (coverageRatio !== null && coverageRatio < 1))
+    else if (
+      sku.fullQty <= sku.minStock ||
+      (coverageRatio !== null && coverageRatio < 1)
+    )
       status = "low";
 
     return {

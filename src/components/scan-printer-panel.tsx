@@ -9,7 +9,8 @@ import { ScanInput } from "@/components/scan-input";
 import { PRINTER_EVENT_LABELS } from "@/lib/labels";
 
 type PrinterInfo = {
-  model: string | null;
+  printerModelId: string | null;
+  printerModel: { id: string; name: string } | null;
   location: string | null;
   ipAddress: string | null;
   connectedTo: string | null;
@@ -25,9 +26,12 @@ type PrinterEvent = {
   user: { name: string };
 };
 
+type PrinterModelOption = { id: string; name: string };
+
 type Props = {
   assetId: string;
   printerInfo: PrinterInfo;
+  printerModels: PrinterModelOption[];
   events: PrinterEvent[];
   onDone: (message: string) => void;
   onError: (message: string) => void;
@@ -36,6 +40,7 @@ type Props = {
 export function ScanPrinterPanel({
   assetId,
   printerInfo,
+  printerModels,
   events,
   onDone,
   onError,
@@ -87,7 +92,7 @@ export function ScanPrinterPanel({
         <dl className="mt-2 grid gap-1 text-sm sm:grid-cols-2">
           <div>
             <dt className="text-muted">Modelo</dt>
-            <dd>{printerInfo?.model || "—"}</dd>
+            <dd>{printerInfo?.printerModel?.name || "—"}</dd>
           </div>
           <div>
             <dt className="text-muted">Ubicación</dt>
@@ -184,13 +189,19 @@ export function ScanPrinterPanel({
         }}
       >
         <div>
-          <label className="label">Modelo</label>
-          <input
-            name="model"
+          <label className="label">Modelo de impresora</label>
+          <select
+            name="printerModelId"
             className="input"
-            defaultValue={printerInfo?.model ?? ""}
-            placeholder="HP LaserJet …"
-          />
+            defaultValue={printerInfo?.printerModelId ?? ""}
+          >
+            <option value="">Sin modelo</option>
+            {printerModels.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
         </div>
         <div>
           <label className="label">Ubicación</label>

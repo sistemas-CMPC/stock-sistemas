@@ -3,11 +3,17 @@ import { ScanWorkstation } from "@/components/scan-workstation";
 import { prisma } from "@/lib/prisma";
 
 export default async function ScanPage() {
-  const people = await prisma.person.findMany({
-    where: { active: true },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, area: true },
-  });
+  const [people, printerModels] = await Promise.all([
+    prisma.person.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, area: true },
+    }),
+    prisma.printerModel.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   return (
     <div className="space-y-6">
@@ -27,7 +33,7 @@ export default async function ScanPage() {
           para poder registrar salidas.
         </div>
       ) : null}
-      <ScanWorkstation people={people} />
+      <ScanWorkstation people={people} printerModels={printerModels} />
     </div>
   );
 }

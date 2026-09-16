@@ -1,6 +1,7 @@
 "use client";
 
-import { useActionState } from "react";
+import { useActionState, useMemo, useState } from "react";
+import Link from "next/link";
 import { createAsset } from "@/app/actions/catalog";
 
 type CategoryOption = {
@@ -10,8 +11,26 @@ type CategoryOption = {
   isPrinter: boolean;
 };
 
-export function NewAssetForm({ categories }: { categories: CategoryOption[] }) {
+type PrinterModelOption = {
+  id: string;
+  name: string;
+};
+
+export function NewAssetForm({
+  categories,
+  printerModels,
+}: {
+  categories: CategoryOption[];
+  printerModels: PrinterModelOption[];
+}) {
   const [state, formAction, pending] = useActionState(createAsset, undefined);
+  const [categoryId, setCategoryId] = useState(categories[0]?.id ?? "");
+
+  const selectedCategory = useMemo(
+    () => categories.find((c) => c.id === categoryId),
+    [categories, categoryId],
+  );
+  const isPrinter = Boolean(selectedCategory?.isPrinter);
 
   return (
     <form action={formAction} className="card space-y-4">
@@ -25,13 +44,25 @@ export function NewAssetForm({ categories }: { categories: CategoryOption[] }) {
         <label className="label" htmlFor="description">
           Descripción
         </label>
-        <textarea id="description" name="description" rows={3} className="input" />
+        <textarea
+          id="description"
+          name="description"
+          rows={3}
+          className="input"
+        />
       </div>
       <div>
         <label className="label" htmlFor="categoryId">
           Categoría
         </label>
-        <select id="categoryId" name="categoryId" required className="input">
+        <select
+          id="categoryId"
+          name="categoryId"
+          required
+          className="input"
+          value={categoryId}
+          onChange={(e) => setCategoryId(e.target.value)}
+        >
           {categories.map((category) => (
             <option key={category.id} value={category.id}>
               {category.name}
@@ -41,16 +72,56 @@ export function NewAssetForm({ categories }: { categories: CategoryOption[] }) {
           ))}
         </select>
       </div>
+
+      {isPrinter ? (
+        <div>
+          <label className="label" htmlFor="printerModelId">
+            Modelo de impresora
+          </label>
+          <select
+            id="printerModelId"
+            name="printerModelId"
+            required
+            className="input"
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Seleccionar modelo…
+            </option>
+            {printerModels.map((model) => (
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
+            ))}
+          </select>
+          <p className="mt-1 text-xs text-muted">
+            El modelo define qué toner usa. Si no está en la lista, crealo en{" "}
+            <Link href="/printers" className="text-accent underline">
+              Impresoras
+            </Link>
+            .
+          </p>
+        </div>
+      ) : null}
+
       <div>
         <label className="label" htmlFor="codeType">
           Tipo de código
         </label>
-        <select id="codeType" name="codeType" className="input" defaultValue="QR">
+        <select
+          id="codeType"
+          name="codeType"
+          className="input"
+          defaultValue={isPrinter ? "QR" : "BARCODE"}
+          key={isPrinter ? "qr" : "bc"}
+        >
           <option value="BARCODE">Código de barras (Code128)</option>
           <option value="QR">Código QR</option>
         </select>
         <p className="mt-1 text-xs text-muted">
-          Para impresoras usá QR: imprimí la etiqueta desde la ficha y pegala en el equipo.
+          {isPrinter
+            ? "Para impresoras usá QR: imprimí la etiqueta desde la ficha y pegala en el equipo."
+            : "Usá barras en equipos chicos y QR si preferís."}
         </p>
       </div>
       <div>

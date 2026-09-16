@@ -159,7 +159,9 @@ export async function findAssetByCode(code: string) {
     include: {
       category: true,
       backupInfo: true,
-      printerInfo: true,
+      printerInfo: {
+        include: { printerModel: true },
+      },
       printerEvents: {
         include: { user: { select: { name: true } } },
         orderBy: { createdAt: "desc" },

@@ -20,13 +20,13 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function AssetDetailPage({ params }: Props) {
   const { id } = await params;
-  const [asset, categories] = await Promise.all([
+  const [asset, categories, printerModels] = await Promise.all([
     prisma.asset.findUnique({
       where: { id },
       include: {
         category: true,
         backupInfo: true,
-        printerInfo: true,
+        printerInfo: { include: { printerModel: true } },
         printerEvents: {
           include: { user: true },
           orderBy: { createdAt: "desc" },
@@ -56,6 +56,10 @@ export default async function AssetDetailPage({ params }: Props) {
       },
     }),
     prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.printerModel.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
   ]);
 
   if (!asset) notFound();
@@ -173,12 +177,19 @@ export default async function AssetDetailPage({ params }: Props) {
             <h2 className="text-lg font-semibold">Info de impresora</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="label">Modelo</label>
-                <input
-                  name="model"
+                <label className="label">Modelo de impresora</label>
+                <select
+                  name="printerModelId"
                   className="input"
-                  defaultValue={asset.printerInfo?.model ?? ""}
-                />
+                  defaultValue={asset.printerInfo?.printerModelId ?? ""}
+                >
+                  <option value="">Sin modelo</option>
+                  {printerModels.map((model) => (
+                    <option key={model.id} value={model.id}>
+                      {model.name}
+                    </option>
+                  ))}
+                </select>
               </div>
               <div>
                 <label className="label">Ubicación</label>

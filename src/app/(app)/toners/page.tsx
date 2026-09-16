@@ -15,11 +15,14 @@ const STATUS_LABEL: Record<string, { label: string; className: string }> = {
 };
 
 export default async function TonersPage() {
-  const [coverage, skus, compats, printerAssets, recentMovements, modelRows] =
+  const [coverage, skus, compats, printerAssets, recentMovements, printerModels] =
     await Promise.all([
       getTonerCoverage(),
       prisma.tonerSku.findMany({ orderBy: { name: "asc" } }),
-      prisma.printerTonerCompat.findMany({ orderBy: { printerModel: "asc" } }),
+      prisma.printerTonerCompat.findMany({
+        include: { printerModel: true },
+        orderBy: { printerModel: { name: "asc" } },
+      }),
       prisma.asset.findMany({
         where: {
           OR: [
@@ -28,7 +31,9 @@ export default async function TonersPage() {
           ],
           status: { not: "RETIRED" },
         },
-        include: { printerInfo: true },
+        include: {
+          printerInfo: { include: { printerModel: true } },
+        },
         orderBy: { name: "asc" },
       }),
       prisma.tonerMovement.findMany({
@@ -40,26 +45,24 @@ export default async function TonersPage() {
         orderBy: { createdAt: "desc" },
         take: 15,
       }),
-      prisma.printerInfo.findMany({
-        where: { model: { not: null } },
-        select: { model: true },
-        distinct: ["model"],
+      prisma.printerModel.findMany({
+        orderBy: { name: "asc" },
+        select: { id: true, name: true },
       }),
     ]);
 
   const printerOptions = printerAssets.map((p) => ({
     id: p.id,
     name: p.name,
-    model: p.printerInfo?.model ?? null,
+    model: p.printerInfo?.printerModel?.name ?? null,
   }));
 
-  const printerModels = [
-    ...new Set(
-      modelRows
-        .map((m) => m.model?.trim())
-        .filter((m): m is string => Boolean(m)),
-    ),
-  ].sort((a, b) => a.localeCompare(b));
+  const compatRows = compats.map((c) => ({
+    id: c.id,
+    tonerSkuId: c.tonerSkuId,
+    printerModelId: c.printerModelId,
+    printerModelName: c.printerModel.name,
+  }));
 
   const alerts = coverage.filter(
     (row) => row.status === "critical" || row.status === "low",
@@ -164,15 +167,15 @@ export default async function TonersPage() {
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Vínculos y ajustes</h2>
         <p className="text-sm text-muted">
-          El modelo debe coincidir con el campo <strong>Modelo</strong> de la{" "}
+          El vínculo es con el <strong>modelo</strong> de impresora (catálogo en{" "}
           <Link href="/printers" className="text-accent underline">
-            impresora
+            Impresoras
           </Link>
-          .
+          ), no con cada equipo individual.
         </p>
         <TonerCompatManager
           skus={skus}
-          compats={compats}
+          compats={compatRows}
           printerModels={printerModels}
         />
       </section>

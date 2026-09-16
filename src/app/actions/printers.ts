@@ -5,25 +5,55 @@ import { PrinterEventType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 
-function revalidatePrinter(assetId: string) {
+function revalidatePrinter(assetId?: string) {
   revalidatePath("/scan");
   revalidatePath("/printers");
-  revalidatePath(`/assets/${assetId}`);
+  revalidatePath("/toners");
+  revalidatePath("/assets/new");
+  if (assetId) revalidatePath(`/assets/${assetId}`);
+}
+
+export async function createPrinterModel(formData: FormData) {
+  await requireUser();
+  const name = String(formData.get("name") ?? "").trim().replace(/\s+/g, " ");
+  const notes = String(formData.get("notes") ?? "");
+  if (!name) throw new Error("Nombre del modelo requerido");
+
+  await prisma.printerModel.create({
+    data: { name, notes },
+  });
+  revalidatePrinter();
 }
 
 export async function updatePrinterInfo(assetId: string, formData: FormData) {
   await requireUser();
 
-  const model = String(formData.get("model") ?? "").trim() || null;
+  const printerModelId =
+    String(formData.get("printerModelId") ?? "").trim() || null;
   const location = String(formData.get("location") ?? "").trim() || null;
   const ipAddress = String(formData.get("ipAddress") ?? "").trim() || null;
   const connectedTo = String(formData.get("connectedTo") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "");
 
+  if (printerModelId) {
+    const exists = await prisma.printerModel.findUnique({
+      where: { id: printerModelId },
+      select: { id: true },
+    });
+    if (!exists) throw new Error("Modelo de impresora inválido");
+  }
+
   await prisma.printerInfo.upsert({
     where: { assetId },
-    update: { model, location, ipAddress, connectedTo, notes },
-    create: { assetId, model, location, ipAddress, connectedTo, notes },
+    update: { printerModelId, location, ipAddress, connectedTo, notes },
+    create: {
+      assetId,
+      printerModelId,
+      location,
+      ipAddress,
+      connectedTo,
+      notes,
+    },
   });
 
   revalidatePrinter(assetId);

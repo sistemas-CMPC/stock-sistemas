@@ -19,7 +19,13 @@ type PersonOption = { id: string; name: string; area: string | null };
 
 type ScannedAsset = NonNullable<Awaited<ReturnType<typeof findAssetByCode>>>;
 
-export function ScanWorkstation({ people }: { people: PersonOption[] }) {
+export function ScanWorkstation({
+  people,
+  printerModels,
+}: {
+  people: PersonOption[];
+  printerModels: { id: string; name: string }[];
+}) {
   const [asset, setAsset] = useState<ScannedAsset | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
@@ -100,6 +106,7 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
               <ScanPrinterPanel
                 assetId={asset.id}
                 printerInfo={asset.printerInfo}
+                printerModels={printerModels}
                 events={asset.printerEvents}
                 onDone={async (msg) => {
                   setError(null);

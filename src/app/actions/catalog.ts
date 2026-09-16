@@ -15,6 +15,7 @@ const assetSchema = z.object({
   codeType: z.enum(["BARCODE", "QR"]),
   code: z.string().optional(),
   generateCode: z.string().optional(),
+  printerModelId: z.string().optional(),
 });
 
 export type CreateAssetState = { error?: string } | undefined;
@@ -34,6 +35,7 @@ export async function createAsset(
       codeType: formData.get("codeType"),
       code: formData.get("code") || undefined,
       generateCode: formData.get("generateCode") || undefined,
+      printerModelId: formData.get("printerModelId") || undefined,
     });
   } catch {
     return { error: "Completá los datos obligatorios del activo" };
@@ -64,6 +66,23 @@ export async function createAsset(
       where: { id: parsed.categoryId },
     });
 
+    if (category.isPrinter && !parsed.printerModelId?.trim()) {
+      return {
+        error:
+          "Para una impresora elegí el modelo (crealo antes en Impresoras si falta).",
+      };
+    }
+
+    let printerModelId: string | undefined;
+    if (category.isPrinter && parsed.printerModelId) {
+      const model = await prisma.printerModel.findUnique({
+        where: { id: parsed.printerModelId },
+        select: { id: true },
+      });
+      if (!model) return { error: "Modelo de impresora inválido" };
+      printerModelId = model.id;
+    }
+
     const asset = await prisma.asset.create({
       data: {
         name: parsed.name,
@@ -74,7 +93,9 @@ export async function createAsset(
         backupInfo: category.isBackupDisk
           ? { create: { description: "" } }
           : undefined,
-        printerInfo: category.isPrinter ? { create: {} } : undefined,
+        printerInfo: category.isPrinter
+          ? { create: { printerModelId } }
+          : undefined,
         movements: {
           create: {
             type: "ALTA",

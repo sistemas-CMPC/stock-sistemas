@@ -2,7 +2,13 @@ import { prisma } from "@/lib/prisma";
 import { NewAssetForm } from "@/components/new-asset-form";
 
 export default async function NewAssetPage() {
-  const categories = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  const [categories, printerModels] = await Promise.all([
+    prisma.category.findMany({ orderBy: { name: "asc" } }),
+    prisma.printerModel.findMany({
+      orderBy: { name: "asc" },
+      select: { id: true, name: true },
+    }),
+  ]);
 
   return (
     <div className="mx-auto max-w-2xl space-y-6">
@@ -13,7 +19,7 @@ export default async function NewAssetPage() {
         </p>
       </div>
 
-      <NewAssetForm categories={categories} />
+      <NewAssetForm categories={categories} printerModels={printerModels} />
     </div>
   );
 }

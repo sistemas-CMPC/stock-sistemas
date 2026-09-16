@@ -142,19 +142,31 @@ model BackupInfo {
   updatedAt    DateTime  @updatedAt
 }
 
+/// Catálogo de modelos de impresora (ej. HP LaserJet Pro M404).
+model PrinterModel {
+  id        String               @id @default(cuid())
+  name      String               @unique
+  notes     String               @default("")
+  createdAt DateTime             @default(now())
+  updatedAt DateTime             @updatedAt
+  printers  PrinterInfo[]
+  toners    PrinterTonerCompat[]
+}
+
 /// Datos fijos de una impresora (ubicación, IP, último toner).
 model PrinterInfo {
-  id          String    @id @default(cuid())
-  assetId     String    @unique
-  asset       Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
-  model       String?
-  location    String?
-  ipAddress   String?
+  id             String        @id @default(cuid())
+  assetId        String        @unique
+  asset          Asset         @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  printerModelId String?
+  printerModel   PrinterModel? @relation(fields: [printerModelId], references: [id], onDelete: SetNull)
+  location       String?
+  ipAddress      String?
   /// A qué equipo/área está conectada (texto libre)
-  connectedTo String?
-  lastTonerAt DateTime?
-  notes       String    @default("")
-  updatedAt   DateTime  @updatedAt
+  connectedTo    String?
+  lastTonerAt    DateTime?
+  notes          String        @default("")
+  updatedAt      DateTime      @updatedAt
 }
 
 /// Historial de mantenimiento (toner, reparaciones, notas).
@@ -190,15 +202,15 @@ model TonerSku {
 
 /// Qué modelo de impresora usa qué toner.
 model PrinterTonerCompat {
-  id           String   @id @default(cuid())
-  tonerSkuId   String
-  tonerSku     TonerSku @relation(fields: [tonerSkuId], references: [id], onDelete: Cascade)
-  /// Debe coincidir con PrinterInfo.model
-  printerModel String
-  createdAt    DateTime @default(now())
+  id             String       @id @default(cuid())
+  tonerSkuId     String
+  tonerSku       TonerSku     @relation(fields: [tonerSkuId], references: [id], onDelete: Cascade)
+  printerModelId String
+  printerModel   PrinterModel @relation(fields: [printerModelId], references: [id], onDelete: Cascade)
+  createdAt      DateTime     @default(now())
 
-  @@unique([tonerSkuId, printerModel])
-  @@index([printerModel])
+  @@unique([tonerSkuId, printerModelId])
+  @@index([printerModelId])
 }
 
 model TonerMovement {

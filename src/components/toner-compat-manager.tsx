@@ -20,13 +20,19 @@ type Sku = {
 type Compat = {
   id: string;
   tonerSkuId: string;
-  printerModel: string;
+  printerModelId: string;
+  printerModelName: string;
+};
+
+type PrinterModelOption = {
+  id: string;
+  name: string;
 };
 
 type Props = {
   skus: Sku[];
   compats: Compat[];
-  printerModels: string[];
+  printerModels: PrinterModelOption[];
 };
 
 export function TonerCompatManager({ skus, compats, printerModels }: Props) {
@@ -57,18 +63,21 @@ export function TonerCompatManager({ skus, compats, printerModels }: Props) {
         </div>
         <div>
           <label className="label">Modelo de impresora</label>
-          <input
-            name="printerModel"
-            list="printer-model-options"
+          <select
+            name="printerModelId"
             required
             className="input"
-            placeholder="Debe coincidir con el modelo en la ficha"
-          />
-          <datalist id="printer-model-options">
+            defaultValue=""
+          >
+            <option value="" disabled>
+              Seleccionar…
+            </option>
             {printerModels.map((model) => (
-              <option key={model} value={model} />
+              <option key={model.id} value={model.id}>
+                {model.name}
+              </option>
             ))}
-          </datalist>
+          </select>
         </div>
         <div className="flex items-end">
           <button type="submit" className="btn-primary w-full" disabled={pending}>
@@ -78,7 +87,7 @@ export function TonerCompatManager({ skus, compats, printerModels }: Props) {
       </form>
 
       <div className="card overflow-x-auto">
-        <h3 className="mb-3 font-semibold">Vínculos toner ↔ impresora</h3>
+        <h3 className="mb-3 font-semibold">Vínculos toner ↔ modelo</h3>
         <table className="table">
           <thead>
             <tr>
@@ -98,7 +107,7 @@ export function TonerCompatManager({ skus, compats, printerModels }: Props) {
                       {sku?.barcode}
                     </span>
                   </td>
-                  <td>{compat.printerModel}</td>
+                  <td>{compat.printerModelName}</td>
                   <td>
                     <button
                       type="button"
@@ -120,7 +129,7 @@ export function TonerCompatManager({ skus, compats, printerModels }: Props) {
               <tr>
                 <td colSpan={3} className="text-muted">
                   Todavía no hay vínculos. Relacioná cada toner con el/los
-                  modelo(s) de impresora que lo usan.
+                  modelo(s) de impresora.
                 </td>
               </tr>
             ) : null}
@@ -157,14 +166,24 @@ export function TonerCompatManager({ skus, compats, printerModels }: Props) {
           </div>
           <div>
             <label className="label">Vacíos</label>
-            <input type="number" name="emptyQty" min={0} required className="input" />
+            <input
+              type="number"
+              name="emptyQty"
+              min={0}
+              required
+              className="input"
+            />
           </div>
           <div className="sm:col-span-3">
             <label className="label">Nota</label>
             <input name="note" className="input" placeholder="Inventario físico" />
           </div>
           <div className="flex items-end">
-            <button type="submit" className="btn-secondary w-full" disabled={pending}>
+            <button
+              type="submit"
+              className="btn-secondary w-full"
+              disabled={pending}
+            >
               Ajustar
             </button>
           </div>
