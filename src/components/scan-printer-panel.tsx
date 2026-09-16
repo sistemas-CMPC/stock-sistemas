@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { addPrinterEvent, updatePrinterInfo } from "@/app/actions/printers";
-import { useTonerByBarcode } from "@/app/actions/toners";
+import { consumeTonerByBarcode } from "@/app/actions/toners";
 import { ScanInput } from "@/components/scan-input";
 import { PRINTER_EVENT_LABELS } from "@/lib/labels";
 
@@ -71,7 +71,7 @@ export function ScanPrinterPanel({
         formData.set("quantity", "1");
         formData.set("printerAssetId", assetId);
         formData.set("keepEmpty", "on");
-        await useTonerByBarcode(formData);
+        await consumeTonerByBarcode(formData);
         setTonerMode(false);
         onDone(`Toner cambiado y stock actualizado (${barcode}).`);
       } catch (err) {

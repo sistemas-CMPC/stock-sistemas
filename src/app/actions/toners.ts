@@ -90,7 +90,8 @@ export async function receiveTonerByBarcode(formData: FormData) {
 }
 
 /** Usa un toner lleno (cambio): baja llenos, sube vacíos; opcionalmente registra en impresora. */
-export async function useTonerByBarcode(formData: FormData) {
+/** Descuenta un toner lleno (cambio en impresora). No es un React Hook. */
+export async function consumeTonerByBarcode(formData: FormData) {
   const user = await requireUser();
 
   const barcode = normalizeBarcode(String(formData.get("barcode") ?? ""));

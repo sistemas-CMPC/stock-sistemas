@@ -4,7 +4,7 @@ import { useState, useTransition } from "react";
 import {
   disposeEmptyToner,
   receiveTonerByBarcode,
-  useTonerByBarcode,
+  consumeTonerByBarcode,
 } from "@/app/actions/toners";
 import { ScanInput } from "@/components/scan-input";
 
@@ -44,7 +44,7 @@ export function TonerScanPanel({ printers }: { printers: PrinterOption[] }) {
         } else if (mode === "used") {
           if (printerAssetId) formData.set("printerAssetId", printerAssetId);
           formData.set("keepEmpty", keepEmpty ? "on" : "off");
-          await useTonerByBarcode(formData);
+          await consumeTonerByBarcode(formData);
           setMessage(
             `Uso OK: −${quantity} lleno(s)${keepEmpty ? `, +${quantity} vacío(s)` : ""} · ${code}`,
           );
