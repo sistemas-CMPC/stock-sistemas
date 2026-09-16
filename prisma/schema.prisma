@@ -1,0 +1,159 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum CodeType {
+  BARCODE
+  QR
+}
+
+enum AssetStatus {
+  IN_STOCK
+  ON_LOAN
+  ASSIGNED
+  RETIRED
+}
+
+enum MovementType {
+  ALTA
+  BAJA
+  INGRESO
+  SALIDA_PRESTAMO
+  DEVOLUCION
+  ASIGNACION
+  FIN_ASIGNACION
+  ASIGNACION_PC
+  FIN_ASIGNACION_PC
+}
+
+model User {
+  id           String     @id @default(cuid())
+  username     String     @unique
+  email        String?    @unique
+  name         String
+  /// Null cuando el usuario autentica solo vía Active Directory
+  passwordHash String?
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  movements    Movement[]
+}
+
+model Category {
+  id           String   @id @default(cuid())
+  name         String   @unique
+  isBackupDisk Boolean  @default(false)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  assets       Asset[]
+}
+
+model Person {
+  id           String        @id @default(cuid())
+  /// sAMAccountName de AD (clave de sync); null si se cargó a mano
+  username     String?       @unique
+  name         String
+  area         String?
+  active       Boolean       @default(true)
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  loans        Loan[]
+  assignments  Assignment[]
+  workstations Workstation[]
+}
+
+model Asset {
+  id          String                 @id @default(cuid())
+  code        String                 @unique
+  codeType    CodeType
+  name        String
+  description String?
+  status      AssetStatus            @default(IN_STOCK)
+  categoryId  String
+  category    Category               @relation(fields: [categoryId], references: [id])
+  createdAt   DateTime               @default(now())
+  updatedAt   DateTime               @updatedAt
+  backupInfo  BackupInfo?
+  loans       Loan[]
+  assignments Assignment[]
+  movements   Movement[]
+  pcInstalls  WorkstationComponent[]
+}
+
+model Workstation {
+  id         String                 @id @default(cuid())
+  name       String                 @unique
+  ipAddress  String?
+  notes      String?
+  active     Boolean                @default(true)
+  personId   String?
+  person     Person?                @relation(fields: [personId], references: [id])
+  createdAt  DateTime               @default(now())
+  updatedAt  DateTime               @updatedAt
+  components WorkstationComponent[]
+}
+
+model WorkstationComponent {
+  id            String      @id @default(cuid())
+  workstationId String
+  workstation   Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  assetId       String
+  asset         Asset       @relation(fields: [assetId], references: [id])
+  installedAt   DateTime    @default(now())
+  removedAt     DateTime?
+  note          String?
+  createdAt     DateTime    @default(now())
+
+  @@index([assetId, removedAt])
+  @@index([workstationId, removedAt])
+}
+
+model BackupInfo {
+  id           String    @id @default(cuid())
+  assetId      String    @unique
+  asset        Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  description  String    @default("")
+  lastBackupAt DateTime?
+  updatedAt    DateTime  @updatedAt
+}
+
+model Loan {
+  id            String    @id @default(cuid())
+  assetId       String
+  asset         Asset     @relation(fields: [assetId], references: [id])
+  personId      String
+  person        Person    @relation(fields: [personId], references: [id])
+  checkedOutAt  DateTime  @default(now())
+  dueAt         DateTime?
+  returnedAt    DateTime?
+  notes         String?
+  createdAt     DateTime  @default(now())
+}
+
+model Assignment {
+  id         String    @id @default(cuid())
+  assetId    String
+  asset      Asset     @relation(fields: [assetId], references: [id])
+  personId   String
+  person     Person    @relation(fields: [personId], references: [id])
+  assignedAt DateTime  @default(now())
+  endedAt    DateTime?
+  note       String?
+  createdAt  DateTime  @default(now())
+}
+
+model Movement {
+  id        String       @id @default(cuid())
+  type      MovementType
+  assetId   String
+  asset     Asset        @relation(fields: [assetId], references: [id])
+  userId    String
+  user      User         @relation(fields: [userId], references: [id])
+  note      String?
+  createdAt DateTime     @default(now())
+}

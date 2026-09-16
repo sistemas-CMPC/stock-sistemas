@@ -1,0 +1,63 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: stock
+      POSTGRES_PASSWORD: stock
+      POSTGRES_DB: stock
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U stock -d stock"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  app:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    # Solo si usás LDAP/AD: mapeá IPs de los DC en .env (DC01_IP / DC02_IP)
+    # extra_hosts:
+    #   - "dc1.example.local:${DC01_IP:-127.0.0.1}"
+    #   - "dc2.example.local:${DC02_IP:-127.0.0.1}"
+    environment:
+      DATABASE_URL: postgresql://stock:stock@db:5432/stock
+      DIRECT_URL: postgresql://stock:stock@db:5432/stock
+      AUTH_SECRET: ${AUTH_SECRET:-change-me-in-production-please}
+      AUTH_TRUST_HOST: "true"
+      AUTH_MODE: ${AUTH_MODE:-local}
+      LDAP_URL: ${LDAP_URL:-}
+      LDAP_BASE_DN: ${LDAP_BASE_DN:-}
+      LDAP_DOMAIN: ${LDAP_DOMAIN:-}
+      LDAP_GROUP: ${LDAP_GROUP:-}
+      LDAP_GROUP_DN: ${LDAP_GROUP_DN:-}
+      LDAP_TLS_CA_FILE: ${LDAP_TLS_CA_FILE:-}
+      NODE_EXTRA_CA_CERTS: ${NODE_EXTRA_CA_CERTS:-}
+      LDAP_TLS_INSECURE: ${LDAP_TLS_INSECURE:-false}
+      LDAP_BIND_USER: ${LDAP_BIND_USER:-}
+      LDAP_BIND_PASSWORD: ${LDAP_BIND_PASSWORD:-}
+      LDAP_USERS_BASE_DN: ${LDAP_USERS_BASE_DN:-}
+      AUTH_ALLOW_LOCAL: ${AUTH_ALLOW_LOCAL:-false}
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
+      ADMIN_NAME: ${ADMIN_NAME:-Operador Sistemas}
+      PASS_NSOSA: ${PASS_NSOSA:-}
+      PASS_NWEI: ${PASS_NWEI:-}
+      PASS_EBELLON: ${PASS_EBELLON:-}
+      PASS_RPARDO: ${PASS_RPARDO:-}
+    # Para LDAP: montá el CA local fuera del repo, p.ej.
+    # volumes:
+    #   - ${LDAP_TLS_CA_HOST_PATH}:/app/certs/ca.pem:ro
+    ports:
+      # Host:contenedor — cambiá APP_PORT en .env si 3000 está ocupado
+      - "${APP_PORT:-3001}:3000"
+
+volumes:
+  postgres_data:

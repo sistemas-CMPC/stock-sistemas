@@ -1,0 +1,12 @@
+node_modules
+.next
+.git
+.env
+.env.local
+.pnpm-store
+.local
+*.pem
+*.key
+exports/
+README.md
+*.md
