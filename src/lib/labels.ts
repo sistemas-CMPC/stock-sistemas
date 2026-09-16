@@ -24,6 +24,20 @@ export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
   FIN_ASIGNACION_PC: "Retirado de PC",
 };
 
+export const PRINTER_EVENT_LABELS: Record<string, string> = {
+  TONER_CHANGE: "Cambio de toner",
+  REPAIR: "Reparación",
+  SERVICE: "Service",
+  NOTE: "Nota",
+};
+
+export const TONER_MOVEMENT_LABELS: Record<string, string> = {
+  INCOMING: "Ingreso (llenos)",
+  USED: "Uso / cambio",
+  EMPTY_OUT: "Salida de vacíos",
+  ADJUST: "Ajuste",
+};
+
 export function generateAssetCode(prefix = "IT"): string {
   const stamp = Date.now().toString(36).toUpperCase();
   const rand = Math.random().toString(36).slice(2, 6).toUpperCase();

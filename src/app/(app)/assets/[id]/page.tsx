@@ -11,8 +11,9 @@ import {
   returnLoan,
 } from "@/app/actions/movements";
 import { retireAsset, updateBackupInfo } from "@/app/actions/catalog";
+import { addPrinterEvent, updatePrinterInfo } from "@/app/actions/printers";
 import { removeComponent } from "@/app/actions/workstations";
-import { MOVEMENT_TYPE_LABELS } from "@/lib/labels";
+import { MOVEMENT_TYPE_LABELS, PRINTER_EVENT_LABELS } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 
 type Props = { params: Promise<{ id: string }> };
@@ -25,6 +26,12 @@ export default async function AssetDetailPage({ params }: Props) {
       include: {
         category: true,
         backupInfo: true,
+        printerInfo: true,
+        printerEvents: {
+          include: { user: true },
+          orderBy: { createdAt: "desc" },
+          take: 20,
+        },
         loans: {
           include: { person: true },
           orderBy: { checkedOutAt: "desc" },
@@ -155,6 +162,129 @@ export default async function AssetDetailPage({ params }: Props) {
             Guardar info backup
           </button>
         </form>
+      ) : null}
+
+      {asset.category.isPrinter || asset.printerInfo ? (
+        <div className="space-y-4">
+          <form
+            action={updatePrinterInfo.bind(null, asset.id)}
+            className="card space-y-4"
+          >
+            <h2 className="text-lg font-semibold">Info de impresora</h2>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="label">Modelo</label>
+                <input
+                  name="model"
+                  className="input"
+                  defaultValue={asset.printerInfo?.model ?? ""}
+                />
+              </div>
+              <div>
+                <label className="label">Ubicación</label>
+                <input
+                  name="location"
+                  className="input"
+                  defaultValue={asset.printerInfo?.location ?? ""}
+                />
+              </div>
+              <div>
+                <label className="label">IP</label>
+                <input
+                  name="ipAddress"
+                  className="input font-mono"
+                  defaultValue={asset.printerInfo?.ipAddress ?? ""}
+                />
+              </div>
+              <div>
+                <label className="label">Conectada a</label>
+                <input
+                  name="connectedTo"
+                  className="input"
+                  defaultValue={asset.printerInfo?.connectedTo ?? ""}
+                  placeholder="PC / red / área"
+                />
+              </div>
+              <div className="sm:col-span-2">
+                <label className="label">Notas</label>
+                <textarea
+                  name="notes"
+                  className="input"
+                  rows={2}
+                  defaultValue={asset.printerInfo?.notes ?? ""}
+                />
+              </div>
+            </div>
+            <p className="text-sm text-muted">
+              Último toner:{" "}
+              {asset.printerInfo?.lastTonerAt
+                ? format(asset.printerInfo.lastTonerAt, "dd/MM/yyyy HH:mm", {
+                    locale: es,
+                  })
+                : "sin registro"}
+            </p>
+            <button type="submit" className="btn-primary">
+              Guardar impresora
+            </button>
+          </form>
+
+          <div className="card space-y-4">
+            <h2 className="text-lg font-semibold">Mantenimiento</h2>
+            <div className="flex flex-wrap gap-2">
+              <form action={addPrinterEvent.bind(null, asset.id)}>
+                <input type="hidden" name="type" value="TONER_CHANGE" />
+                <button type="submit" className="btn-primary">
+                  Cambiar toner
+                </button>
+              </form>
+              <form
+                action={addPrinterEvent.bind(null, asset.id)}
+                className="flex flex-wrap gap-2"
+              >
+                <input type="hidden" name="type" value="REPAIR" />
+                <input
+                  name="note"
+                  className="input max-w-xs"
+                  placeholder="Detalle reparación"
+                />
+                <button type="submit" className="btn-secondary">
+                  Registrar reparación
+                </button>
+              </form>
+            </div>
+            <table className="table">
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Tipo</th>
+                  <th>Operador</th>
+                  <th>Nota</th>
+                </tr>
+              </thead>
+              <tbody>
+                {asset.printerEvents.map((event) => (
+                  <tr key={event.id}>
+                    <td>
+                      {format(event.createdAt, "dd/MM/yyyy HH:mm", {
+                        locale: es,
+                      })}
+                    </td>
+                    <td>{PRINTER_EVENT_LABELS[event.type] ?? event.type}</td>
+                    <td>{event.user.name}</td>
+                    <td>{event.note ?? "—"}</td>
+                  </tr>
+                ))}
+                {asset.printerEvents.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} className="text-muted">
+                      Sin eventos aún
+                    </td>
+                  </tr>
+                ) : null}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : null}
 
       {(activeLoan || activeAssignment || activePcInstall) && (

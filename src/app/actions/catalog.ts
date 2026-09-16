@@ -74,6 +74,7 @@ export async function createAsset(
         backupInfo: category.isBackupDisk
           ? { create: { description: "" } }
           : undefined,
+        printerInfo: category.isPrinter ? { create: {} } : undefined,
         movements: {
           create: {
             type: "ALTA",
@@ -86,6 +87,7 @@ export async function createAsset(
 
     revalidatePath("/assets");
     revalidatePath("/backup");
+    revalidatePath("/printers");
     redirect(`/assets/${asset.id}`);
   } catch (error) {
     unstable_rethrow(error);
@@ -159,9 +161,18 @@ export async function updateAsset(
       });
     }
 
+    if (category.isPrinter) {
+      await prisma.printerInfo.upsert({
+        where: { assetId },
+        update: {},
+        create: { assetId },
+      });
+    }
+
     revalidatePath(`/assets/${assetId}`);
     revalidatePath("/assets");
     revalidatePath("/backup");
+    revalidatePath("/printers");
     return { ok: true };
   } catch (error) {
     if (
@@ -226,11 +237,13 @@ export async function deleteAsset(assetId: string) {
     prisma.loan.deleteMany({ where: { assetId } }),
     prisma.assignment.deleteMany({ where: { assetId } }),
     prisma.workstationComponent.deleteMany({ where: { assetId } }),
+    prisma.printerEvent.deleteMany({ where: { assetId } }),
     prisma.asset.delete({ where: { id: assetId } }),
   ]);
 
   revalidatePath("/assets");
   revalidatePath("/backup");
+  revalidatePath("/printers");
   revalidatePath("/movements");
   redirect("/assets");
 }
@@ -266,10 +279,11 @@ export async function createCategory(formData: FormData) {
   await requireUser();
   const name = String(formData.get("name") ?? "").trim();
   const isBackupDisk = formData.get("isBackupDisk") === "on";
+  const isPrinter = formData.get("isPrinter") === "on";
   if (!name) throw new Error("Nombre requerido");
 
   await prisma.category.create({
-    data: { name, isBackupDisk },
+    data: { name, isBackupDisk, isPrinter },
   });
   revalidatePath("/categories");
 }

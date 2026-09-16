@@ -23,6 +23,10 @@ export default async function CategoriesPage() {
           <input type="checkbox" name="isBackupDisk" />
           Es disco de backup
         </label>
+        <label className="mb-2 flex items-center gap-2 text-sm">
+          <input type="checkbox" name="isPrinter" />
+          Es impresora
+        </label>
         <button type="submit" className="btn-primary">
           Crear
         </button>
@@ -34,6 +38,7 @@ export default async function CategoriesPage() {
             <tr>
               <th>Nombre</th>
               <th>Backup</th>
+              <th>Impresora</th>
               <th>Activos</th>
             </tr>
           </thead>
@@ -42,6 +47,7 @@ export default async function CategoriesPage() {
               <tr key={category.id}>
                 <td>{category.name}</td>
                 <td>{category.isBackupDisk ? "Sí" : "No"}</td>
+                <td>{category.isPrinter ? "Sí" : "No"}</td>
                 <td>{category._count.assets}</td>
               </tr>
             ))}

@@ -5,6 +5,8 @@ const links = [
   { href: "/", label: "Dashboard" },
   { href: "/scan", label: "Escanear" },
   { href: "/assets", label: "Activos" },
+  { href: "/printers", label: "Impresoras" },
+  { href: "/toners", label: "Toners" },
   { href: "/workstations", label: "PCs" },
   { href: "/people", label: "Clientes" },
   { href: "/backup", label: "Discos backup" },

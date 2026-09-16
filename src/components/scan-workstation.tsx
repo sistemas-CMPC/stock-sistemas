@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import {
   checkoutLoan,
@@ -11,6 +11,7 @@ import {
 } from "@/app/actions/movements";
 import { removeComponent } from "@/app/actions/workstations";
 import { ScanInput } from "@/components/scan-input";
+import { ScanPrinterPanel } from "@/components/scan-printer-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { ASSET_STATUS_LABELS } from "@/lib/labels";
 
@@ -24,6 +25,12 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
   const [message, setMessage] = useState<string | null>(null);
   const [mode, setMode] = useState<"loan" | "assignment">("loan");
   const [pending, startTransition] = useTransition();
+
+  const isPrinter = Boolean(asset?.category.isPrinter || asset?.printerInfo);
+
+  useEffect(() => {
+    if (isPrinter) setMode("assignment");
+  }, [isPrinter, asset?.id]);
 
   function handleScan(code: string) {
     setError(null);
@@ -49,7 +56,9 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
       <div className="card space-y-3">
         <h2 className="text-lg font-semibold">Pistola / teclado</h2>
         <p className="text-sm text-muted">
-          Escaneá el código y presioná Enter (la mayoría de pistolas lo envían solas).
+          Escaneá el código (QR o barras) con pistola, teclado o cámara del
+          celular. En impresoras vas a ver ubicación, a quién está conectada,
+          toner y reparaciones.
         </p>
         <ScanInput onScan={handleScan} />
         {error ? <p className="text-sm text-danger">{error}</p> : null}
@@ -60,7 +69,9 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
         <div className="card space-y-4">
           <div className="flex flex-wrap items-start justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted">Activo</p>
+              <p className="text-xs uppercase tracking-wide text-muted">
+                {isPrinter ? "Impresora" : "Activo"}
+              </p>
               <h3 className="text-2xl font-bold">{asset.name}</h3>
               <p className="font-mono text-sm text-muted">{asset.code}</p>
               <p className="text-sm text-muted">{asset.category.name}</p>
@@ -73,26 +84,62 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
             </div>
           </div>
 
+          {isPrinter ? (
+            <>
+              {asset.assignments[0] ? (
+                <p className="text-sm">
+                  Responsable:{" "}
+                  <strong>{asset.assignments[0].person.name}</strong>
+                  {asset.assignments[0].note
+                    ? ` · ${asset.assignments[0].note}`
+                    : ""}
+                </p>
+              ) : (
+                <p className="text-sm text-muted">Sin responsable asignado.</p>
+              )}
+              <ScanPrinterPanel
+                assetId={asset.id}
+                printerInfo={asset.printerInfo}
+                events={asset.printerEvents}
+                onDone={async (msg) => {
+                  setError(null);
+                  setMessage(msg);
+                  await refreshAsset(asset.code);
+                }}
+                onError={(msg) => {
+                  setMessage(null);
+                  setError(msg);
+                }}
+              />
+            </>
+          ) : null}
+
           {asset.status === "IN_STOCK" ? (
             <div className="space-y-4 border-t border-border pt-4">
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  className={mode === "loan" ? "btn-primary" : "btn-secondary"}
-                  onClick={() => setMode("loan")}
-                >
-                  Préstamo
-                </button>
-                <button
-                  type="button"
-                  className={mode === "assignment" ? "btn-primary" : "btn-secondary"}
-                  onClick={() => setMode("assignment")}
-                >
-                  Asignación
-                </button>
-              </div>
+              {!isPrinter ? (
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    className={mode === "loan" ? "btn-primary" : "btn-secondary"}
+                    onClick={() => setMode("loan")}
+                  >
+                    Préstamo
+                  </button>
+                  <button
+                    type="button"
+                    className={
+                      mode === "assignment" ? "btn-primary" : "btn-secondary"
+                    }
+                    onClick={() => setMode("assignment")}
+                  >
+                    Asignación
+                  </button>
+                </div>
+              ) : (
+                <h4 className="font-semibold">Asignar responsable</h4>
+              )}
 
-              {mode === "loan" ? (
+              {mode === "loan" && !isPrinter ? (
                 <form
                   className="grid gap-3 sm:grid-cols-2"
                   action={(formData) => {
@@ -128,7 +175,11 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
                     <label className="label">Notas</label>
                     <input name="notes" className="input" />
                   </div>
-                  <button type="submit" className="btn-primary sm:col-span-2" disabled={pending}>
+                  <button
+                    type="submit"
+                    className="btn-primary sm:col-span-2"
+                    disabled={pending}
+                  >
                     Confirmar salida por préstamo
                   </button>
                 </form>
@@ -161,10 +212,18 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
                     </select>
                   </div>
                   <div>
-                    <label className="label">Nota (ej. PC Contaduría)</label>
+                    <label className="label">
+                      {isPrinter
+                        ? "Nota (área / uso)"
+                        : "Nota (ej. PC Contaduría)"}
+                    </label>
                     <input name="note" className="input" />
                   </div>
-                  <button type="submit" className="btn-primary sm:col-span-2" disabled={pending}>
+                  <button
+                    type="submit"
+                    className="btn-primary sm:col-span-2"
+                    disabled={pending}
+                  >
                     Confirmar asignación
                   </button>
                 </form>
@@ -226,7 +285,9 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
                           setMessage("Retirado de la PC. Volvió a stock.");
                           await refreshAsset(asset.code);
                         } catch (err) {
-                          setError(err instanceof Error ? err.message : "Error");
+                          setError(
+                            err instanceof Error ? err.message : "Error",
+                          );
                         }
                       });
                     }}
@@ -236,18 +297,20 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
                 </>
               ) : (
                 <>
-                  <p className="text-sm">
-                    Asignado a{" "}
-                    <strong>
-                      {asset.assignments[0]?.person.name ?? "desconocido"}
-                    </strong>
-                    {asset.assignments[0]?.note
-                      ? ` · ${asset.assignments[0].note}`
-                      : ""}
-                  </p>
+                  {!isPrinter ? (
+                    <p className="text-sm">
+                      Asignado a{" "}
+                      <strong>
+                        {asset.assignments[0]?.person.name ?? "desconocido"}
+                      </strong>
+                      {asset.assignments[0]?.note
+                        ? ` · ${asset.assignments[0].note}`
+                        : ""}
+                    </p>
+                  ) : null}
                   <button
                     type="button"
-                    className="btn-primary"
+                    className="btn-secondary"
                     disabled={pending}
                     onClick={() => {
                       startTransition(async () => {
@@ -256,7 +319,9 @@ export function ScanWorkstation({ people }: { people: PersonOption[] }) {
                           setMessage("Asignación finalizada. Volvió a stock.");
                           await refreshAsset(asset.code);
                         } catch (err) {
-                          setError(err instanceof Error ? err.message : "Error");
+                          setError(
+                            err instanceof Error ? err.message : "Error",
+                          );
                         }
                       });
                     }}

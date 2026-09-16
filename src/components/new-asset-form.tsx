@@ -7,6 +7,7 @@ type CategoryOption = {
   id: string;
   name: string;
   isBackupDisk: boolean;
+  isPrinter: boolean;
 };
 
 export function NewAssetForm({ categories }: { categories: CategoryOption[] }) {
@@ -35,6 +36,7 @@ export function NewAssetForm({ categories }: { categories: CategoryOption[] }) {
             <option key={category.id} value={category.id}>
               {category.name}
               {category.isBackupDisk ? " (backup)" : ""}
+              {category.isPrinter ? " (impresora)" : ""}
             </option>
           ))}
         </select>
@@ -43,12 +45,12 @@ export function NewAssetForm({ categories }: { categories: CategoryOption[] }) {
         <label className="label" htmlFor="codeType">
           Tipo de código
         </label>
-        <select id="codeType" name="codeType" className="input" defaultValue="BARCODE">
+        <select id="codeType" name="codeType" className="input" defaultValue="QR">
           <option value="BARCODE">Código de barras (Code128)</option>
           <option value="QR">Código QR</option>
         </select>
         <p className="mt-1 text-xs text-muted">
-          Usá barras en equipos chicos (pendrive) y QR en equipos más grandes si preferís.
+          Para impresoras usá QR: imprimí la etiqueta desde la ficha y pegala en el equipo.
         </p>
       </div>
       <div>

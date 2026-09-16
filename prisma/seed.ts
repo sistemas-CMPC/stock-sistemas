@@ -4,15 +4,16 @@ import { hash } from "bcryptjs";
 const prisma = new PrismaClient();
 
 const defaultCategories = [
-  { name: "Notebook", isBackupDisk: false },
-  { name: "Pendrive", isBackupDisk: false },
-  { name: "Disco externo", isBackupDisk: false },
-  { name: "Disco de backup", isBackupDisk: true },
-  { name: "SSD", isBackupDisk: false },
-  { name: "HDD", isBackupDisk: false },
-  { name: "RAM", isBackupDisk: false },
-  { name: "Cable", isBackupDisk: false },
-  { name: "Otro", isBackupDisk: false },
+  { name: "Notebook", isBackupDisk: false, isPrinter: false },
+  { name: "Pendrive", isBackupDisk: false, isPrinter: false },
+  { name: "Disco externo", isBackupDisk: false, isPrinter: false },
+  { name: "Disco de backup", isBackupDisk: true, isPrinter: false },
+  { name: "Impresora", isBackupDisk: false, isPrinter: true },
+  { name: "SSD", isBackupDisk: false, isPrinter: false },
+  { name: "HDD", isBackupDisk: false, isPrinter: false },
+  { name: "RAM", isBackupDisk: false, isPrinter: false },
+  { name: "Cable", isBackupDisk: false, isPrinter: false },
+  { name: "Otro", isBackupDisk: false, isPrinter: false },
 ];
 
 /** Operadores de Sistemas con login local (no AD). Contraseñas solo por env. */
@@ -66,7 +67,10 @@ async function main() {
   for (const category of defaultCategories) {
     await prisma.category.upsert({
       where: { name: category.name },
-      update: { isBackupDisk: category.isBackupDisk },
+      update: {
+        isBackupDisk: category.isBackupDisk,
+        isPrinter: category.isPrinter,
+      },
       create: category,
     });
   }

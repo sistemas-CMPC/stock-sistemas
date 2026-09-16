@@ -32,22 +32,39 @@ enum MovementType {
   FIN_ASIGNACION_PC
 }
 
+enum PrinterEventType {
+  TONER_CHANGE
+  REPAIR
+  SERVICE
+  NOTE
+}
+
+enum TonerMovementType {
+  INCOMING
+  USED
+  EMPTY_OUT
+  ADJUST
+}
+
 model User {
-  id           String     @id @default(cuid())
-  username     String     @unique
-  email        String?    @unique
-  name         String
+  id             String          @id @default(cuid())
+  username       String          @unique
+  email          String?         @unique
+  name           String
   /// Null cuando el usuario autentica solo vía Active Directory
-  passwordHash String?
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
-  movements    Movement[]
+  passwordHash   String?
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  movements      Movement[]
+  printerEvents  PrinterEvent[]
+  tonerMovements TonerMovement[]
 }
 
 model Category {
   id           String   @id @default(cuid())
   name         String   @unique
   isBackupDisk Boolean  @default(false)
+  isPrinter    Boolean  @default(false)
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
   assets       Asset[]
@@ -76,13 +93,16 @@ model Asset {
   status      AssetStatus            @default(IN_STOCK)
   categoryId  String
   category    Category               @relation(fields: [categoryId], references: [id])
-  createdAt   DateTime               @default(now())
-  updatedAt   DateTime               @updatedAt
-  backupInfo  BackupInfo?
-  loans       Loan[]
-  assignments Assignment[]
-  movements   Movement[]
-  pcInstalls  WorkstationComponent[]
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  backupInfo     BackupInfo?
+  printerInfo    PrinterInfo?
+  printerEvents  PrinterEvent[]
+  tonerMovements TonerMovement[]
+  loans          Loan[]
+  assignments    Assignment[]
+  movements      Movement[]
+  pcInstalls     WorkstationComponent[]
 }
 
 model Workstation {
@@ -120,6 +140,81 @@ model BackupInfo {
   description  String    @default("")
   lastBackupAt DateTime?
   updatedAt    DateTime  @updatedAt
+}
+
+/// Datos fijos de una impresora (ubicación, IP, último toner).
+model PrinterInfo {
+  id          String    @id @default(cuid())
+  assetId     String    @unique
+  asset       Asset     @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  model       String?
+  location    String?
+  ipAddress   String?
+  /// A qué equipo/área está conectada (texto libre)
+  connectedTo String?
+  lastTonerAt DateTime?
+  notes       String    @default("")
+  updatedAt   DateTime  @updatedAt
+}
+
+/// Historial de mantenimiento (toner, reparaciones, notas).
+model PrinterEvent {
+  id        String           @id @default(cuid())
+  assetId   String
+  asset     Asset            @relation(fields: [assetId], references: [id], onDelete: Cascade)
+  type      PrinterEventType
+  userId    String
+  user      User             @relation(fields: [userId], references: [id])
+  note      String?
+  createdAt DateTime         @default(now())
+
+  @@index([assetId, createdAt])
+}
+
+/// Tipo de toner (mismo código de barras = misma familia/modelo).
+model TonerSku {
+  id          String               @id @default(cuid())
+  barcode     String               @unique
+  name        String
+  color       String?
+  /// Alerta cuando los llenos bajan a este nivel
+  minStock    Int                  @default(1)
+  notes       String               @default("")
+  fullQty     Int                  @default(0)
+  emptyQty    Int                  @default(0)
+  createdAt   DateTime             @default(now())
+  updatedAt   DateTime             @updatedAt
+  printers    PrinterTonerCompat[]
+  movements   TonerMovement[]
+}
+
+/// Qué modelo de impresora usa qué toner.
+model PrinterTonerCompat {
+  id           String   @id @default(cuid())
+  tonerSkuId   String
+  tonerSku     TonerSku @relation(fields: [tonerSkuId], references: [id], onDelete: Cascade)
+  /// Debe coincidir con PrinterInfo.model
+  printerModel String
+  createdAt    DateTime @default(now())
+
+  @@unique([tonerSkuId, printerModel])
+  @@index([printerModel])
+}
+
+model TonerMovement {
+  id             String            @id @default(cuid())
+  tonerSkuId     String
+  tonerSku       TonerSku          @relation(fields: [tonerSkuId], references: [id], onDelete: Cascade)
+  type           TonerMovementType
+  quantity       Int               @default(1)
+  userId         String
+  user           User              @relation(fields: [userId], references: [id])
+  printerAssetId String?
+  printerAsset   Asset?            @relation(fields: [printerAssetId], references: [id], onDelete: SetNull)
+  note           String?
+  createdAt      DateTime          @default(now())
+
+  @@index([tonerSkuId, createdAt])
 }
 
 model Loan {

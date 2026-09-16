@@ -159,6 +159,12 @@ export async function findAssetByCode(code: string) {
     include: {
       category: true,
       backupInfo: true,
+      printerInfo: true,
+      printerEvents: {
+        include: { user: { select: { name: true } } },
+        orderBy: { createdAt: "desc" },
+        take: 8,
+      },
       loans: {
         where: { returnedAt: null },
         include: { person: true },
