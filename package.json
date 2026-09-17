@@ -5,12 +5,13 @@
   "packageManager": "pnpm@9.15.9",
   "scripts": {
     "dev": "next dev --turbopack",
-    "build": "prisma generate && next build",
+    "build": "prisma generate && tsx prisma/seed.ts && next build",
     "start": "next start",
     "lint": "eslint",
     "db:migrate": "prisma migrate dev",
     "db:deploy": "prisma migrate deploy",
     "db:seed": "tsx prisma/seed.ts",
+    "db:sync-passwords": "tsx prisma/seed.ts",
     "db:studio": "prisma studio"
   },
   "prisma": {

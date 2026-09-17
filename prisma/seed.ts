@@ -75,6 +75,7 @@ async function main() {
     });
   }
 
+  const updated: string[] = [];
   for (const user of officeUsers) {
     const password = process.env[user.passwordEnv]?.trim();
     if (!password) {
@@ -88,20 +89,25 @@ async function main() {
       name: user.name,
       password,
     });
+    updated.push(user.username);
   }
 
-  const adminPassword = process.env.ADMIN_PASSWORD;
+  const adminPassword = process.env.ADMIN_PASSWORD?.trim();
   if (adminPassword) {
+    const adminUsername = (process.env.ADMIN_USERNAME ?? "admin")
+      .trim()
+      .toLowerCase();
     await upsertUser({
-      username: (process.env.ADMIN_USERNAME ?? "admin").trim().toLowerCase(),
+      username: adminUsername,
       name: process.env.ADMIN_NAME ?? "Operador Sistemas",
       password: adminPassword,
       email: process.env.ADMIN_EMAIL ?? null,
     });
+    updated.push(adminUsername);
   }
 
   console.log(
-    `Seed OK — categorías + operadores: ${officeUsers.map((u) => u.username).join(", ")}`,
+    `Seed OK — categorías + operadores con clave actualizada: ${updated.join(", ") || "(ninguno; definí PASS_*)"}`,
   );
 }
 
