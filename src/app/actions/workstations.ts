@@ -213,8 +213,10 @@ export async function installComponentByCode(
   revalidatePath("/");
 }
 
-export async function removeComponent(componentId: string) {
+export async function removeComponent(formData: FormData) {
   const user = await requireUser();
+  const componentId = String(formData.get("componentId") ?? "").trim();
+  if (!componentId) throw new Error("Componente inválido");
 
   const component = await prisma.workstationComponent.findUniqueOrThrow({
     where: { id: componentId },
@@ -225,24 +227,27 @@ export async function removeComponent(componentId: string) {
     throw new Error("El componente ya fue retirado");
   }
 
-  await prisma.$transaction([
-    prisma.workstationComponent.update({
+  const userId = user.id;
+  if (!userId) throw new Error("Sesión inválida");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.workstationComponent.update({
       where: { id: componentId },
       data: { removedAt: new Date() },
-    }),
-    prisma.asset.update({
+    });
+    await tx.asset.update({
       where: { id: component.assetId },
       data: { status: "IN_STOCK" },
-    }),
-    prisma.movement.create({
+    });
+    await tx.movement.create({
       data: {
         type: "FIN_ASIGNACION_PC",
         assetId: component.assetId,
-        userId: user.id!,
+        userId,
         note: `Retirado de ${component.workstation.name}`,
       },
-    }),
-  ]);
+    });
+  });
 
   revalidatePath(`/workstations/${component.workstationId}`);
   revalidatePath("/workstations");
@@ -250,4 +255,5 @@ export async function removeComponent(componentId: string) {
   revalidatePath("/assets");
   revalidatePath("/movements");
   revalidatePath("/");
+  revalidatePath("/scan");
 }

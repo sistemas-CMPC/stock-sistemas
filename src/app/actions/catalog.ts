@@ -207,8 +207,13 @@ export async function updateAsset(
   }
 }
 
-export async function retireAsset(assetId: string) {
+export async function retireAsset(formData: FormData) {
   const user = await requireUser();
+  const assetId = String(formData.get("assetId") ?? "").trim();
+  if (!assetId) throw new Error("Activo inválido");
+  const userId = user.id;
+  if (!userId) throw new Error("Sesión inválida");
+
   await prisma.asset.update({
     where: { id: assetId },
     data: {
@@ -216,7 +221,7 @@ export async function retireAsset(assetId: string) {
       movements: {
         create: {
           type: "BAJA",
-          userId: user.id!,
+          userId,
           note: "Activo dado de baja",
         },
       },

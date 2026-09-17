@@ -251,7 +251,9 @@ export function ScanWorkstation({
                 onClick={() => {
                   startTransition(async () => {
                     try {
-                      await returnLoan(asset.id);
+                      const fd = new FormData();
+                      fd.set("assetId", asset.id);
+                      await returnLoan(fd);
                       setMessage("Devolución registrada.");
                       await refreshAsset(asset.code);
                     } catch (err) {
@@ -288,7 +290,9 @@ export function ScanWorkstation({
                     onClick={() => {
                       startTransition(async () => {
                         try {
-                          await removeComponent(asset.pcInstalls[0].id);
+                          const fd = new FormData();
+                          fd.set("componentId", asset.pcInstalls[0].id);
+                          await removeComponent(fd);
                           setMessage("Retirado de la PC. Volvió a stock.");
                           await refreshAsset(asset.code);
                         } catch (err) {
@@ -322,7 +326,9 @@ export function ScanWorkstation({
                     onClick={() => {
                       startTransition(async () => {
                         try {
-                          await endAssignment(asset.id);
+                          const fd = new FormData();
+                          fd.set("assetId", asset.id);
+                          await endAssignment(fd);
                           setMessage("Asignación finalizada. Volvió a stock.");
                           await refreshAsset(asset.code);
                         } catch (err) {

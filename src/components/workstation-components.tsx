@@ -108,7 +108,9 @@ export function WorkstationComponents({
                       setError(null);
                       startTransition(async () => {
                         try {
-                          await removeComponent(component.id);
+                          const fd = new FormData();
+                          fd.set("componentId", component.id);
+                          await removeComponent(fd);
                           setMessage("Componente retirado; volvió a stock.");
                         } catch (err) {
                           setError(

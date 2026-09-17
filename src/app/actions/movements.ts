@@ -45,8 +45,11 @@ export async function checkoutLoan(formData: FormData) {
   revalidatePath("/movements");
 }
 
-export async function returnLoan(assetId: string) {
+export async function returnLoan(formData: FormData) {
   const user = await requireUser();
+  const assetId = String(formData.get("assetId") ?? "").trim();
+  if (!assetId) throw new Error("Activo inválido");
+
   const loan = await prisma.loan.findFirst({
     where: { assetId, returnedAt: null },
     orderBy: { checkedOutAt: "desc" },
@@ -54,27 +57,31 @@ export async function returnLoan(assetId: string) {
 
   if (!loan) throw new Error("No hay préstamo activo");
 
-  await prisma.$transaction([
-    prisma.loan.update({
+  const userId = user.id;
+  if (!userId) throw new Error("Sesión inválida");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.loan.update({
       where: { id: loan.id },
       data: { returnedAt: new Date() },
-    }),
-    prisma.asset.update({
+    });
+    await tx.asset.update({
       where: { id: assetId },
       data: { status: "IN_STOCK" },
-    }),
-    prisma.movement.create({
+    });
+    await tx.movement.create({
       data: {
         type: "DEVOLUCION",
         assetId,
-        userId: user.id!,
+        userId,
         note: "Devolución de préstamo",
       },
-    }),
-  ]);
+    });
+  });
 
   revalidatePath("/scan");
   revalidatePath(`/assets/${assetId}`);
+  revalidatePath("/assets");
   revalidatePath("/");
   revalidatePath("/movements");
 }
@@ -90,27 +97,30 @@ export async function createAssignment(formData: FormData) {
     throw new Error("El activo no está en stock");
   }
 
-  await prisma.$transaction([
-    prisma.assignment.create({
+  const userId = user.id;
+  if (!userId) throw new Error("Sesión inválida");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.assignment.create({
       data: {
         assetId,
         personId,
         note: note || null,
       },
-    }),
-    prisma.asset.update({
+    });
+    await tx.asset.update({
       where: { id: assetId },
       data: { status: "ASSIGNED" },
-    }),
-    prisma.movement.create({
+    });
+    await tx.movement.create({
       data: {
         type: "ASIGNACION",
         assetId,
-        userId: user.id!,
+        userId,
         note: note || null,
       },
-    }),
-  ]);
+    });
+  });
 
   revalidatePath("/scan");
   revalidatePath("/assets");
@@ -118,8 +128,11 @@ export async function createAssignment(formData: FormData) {
   revalidatePath("/movements");
 }
 
-export async function endAssignment(assetId: string) {
+export async function endAssignment(formData: FormData) {
   const user = await requireUser();
+  const assetId = String(formData.get("assetId") ?? "").trim();
+  if (!assetId) throw new Error("Activo inválido");
+
   const assignment = await prisma.assignment.findFirst({
     where: { assetId, endedAt: null },
     orderBy: { assignedAt: "desc" },
@@ -127,27 +140,31 @@ export async function endAssignment(assetId: string) {
 
   if (!assignment) throw new Error("No hay asignación activa");
 
-  await prisma.$transaction([
-    prisma.assignment.update({
+  const userId = user.id;
+  if (!userId) throw new Error("Sesión inválida");
+
+  await prisma.$transaction(async (tx) => {
+    await tx.assignment.update({
       where: { id: assignment.id },
       data: { endedAt: new Date() },
-    }),
-    prisma.asset.update({
+    });
+    await tx.asset.update({
       where: { id: assetId },
       data: { status: "IN_STOCK" },
-    }),
-    prisma.movement.create({
+    });
+    await tx.movement.create({
       data: {
         type: "FIN_ASIGNACION",
         assetId,
-        userId: user.id!,
+        userId,
         note: "Fin de asignación / ingreso a stock",
       },
-    }),
-  ]);
+    });
+  });
 
   revalidatePath("/scan");
   revalidatePath(`/assets/${assetId}`);
+  revalidatePath("/assets");
   revalidatePath("/");
   revalidatePath("/movements");
 }

@@ -85,28 +85,32 @@ export default async function AssetDetailPage({ params }: Props) {
         </div>
         <div className="flex flex-wrap gap-2">
           {asset.status === "ON_LOAN" ? (
-            <form action={returnLoan.bind(null, asset.id)}>
+            <form action={returnLoan}>
+              <input type="hidden" name="assetId" value={asset.id} />
               <button type="submit" className="btn-primary">
                 Registrar devolución
               </button>
             </form>
           ) : null}
           {activeAssignment && !activePcInstall ? (
-            <form action={endAssignment.bind(null, asset.id)}>
+            <form action={endAssignment}>
+              <input type="hidden" name="assetId" value={asset.id} />
               <button type="submit" className="btn-primary">
                 Finalizar asignación
               </button>
             </form>
           ) : null}
           {activePcInstall ? (
-            <form action={removeComponent.bind(null, activePcInstall.id)}>
+            <form action={removeComponent}>
+              <input type="hidden" name="componentId" value={activePcInstall.id} />
               <button type="submit" className="btn-primary">
                 Retirar de PC
               </button>
             </form>
           ) : null}
           {asset.status !== "RETIRED" ? (
-            <form action={retireAsset.bind(null, asset.id)}>
+            <form action={retireAsset}>
+              <input type="hidden" name="assetId" value={asset.id} />
               <button type="submit" className="btn-danger">
                 Dar de baja
               </button>
