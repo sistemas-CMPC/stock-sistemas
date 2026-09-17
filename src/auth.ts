@@ -24,7 +24,9 @@ class AdSignInError extends CredentialsSignin {
 }
 
 function authMode(): "local" | "ldap" {
-  const mode = process.env.AUTH_MODE?.trim().toLowerCase();
+  const mode = process.env.AUTH_MODE?.trim()
+    .replace(/^["']|["']$/g, "")
+    .toLowerCase();
   if (mode === "local") return "local";
   if (mode === "ldap") return "ldap";
   // Por defecto: local si no hay LDAP; ldap si hay LDAP_URL

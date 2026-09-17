@@ -1,5 +1,5 @@
 import { PrismaClient } from "@prisma/client";
-import { hash } from "bcryptjs";
+import { syncOperatorPasswordsFromEnv } from "../src/lib/sync-passwords";
 
 const prisma = new PrismaClient();
 
@@ -16,53 +16,6 @@ const defaultCategories = [
   { name: "Otro", isBackupDisk: false, isPrinter: false },
 ];
 
-/** Operadores de Sistemas con login local (no AD). Contraseñas solo por env. */
-const officeUsers = [
-  {
-    username: "nsosa",
-    name: "Nahuel Sosa",
-    passwordEnv: "PASS_NSOSA",
-  },
-  {
-    username: "nwei",
-    name: "Nicolas Weinmeister",
-    passwordEnv: "PASS_NWEI",
-  },
-  {
-    username: "ebellon",
-    name: "Enzo Bellon",
-    passwordEnv: "PASS_EBELLON",
-  },
-  {
-    username: "rpardo",
-    name: "Ricardo Pardo",
-    passwordEnv: "PASS_RPARDO",
-  },
-];
-
-async function upsertUser(input: {
-  username: string;
-  name: string;
-  password: string;
-  email?: string | null;
-}) {
-  const passwordHash = await hash(input.password, 10);
-  await prisma.user.upsert({
-    where: { username: input.username },
-    update: {
-      name: input.name,
-      passwordHash,
-      email: input.email ?? null,
-    },
-    create: {
-      username: input.username,
-      name: input.name,
-      passwordHash,
-      email: input.email ?? null,
-    },
-  });
-}
-
 async function main() {
   for (const category of defaultCategories) {
     await prisma.category.upsert({
@@ -75,35 +28,11 @@ async function main() {
     });
   }
 
-  const updated: string[] = [];
-  for (const user of officeUsers) {
-    const password = process.env[user.passwordEnv]?.trim();
-    if (!password) {
-      console.warn(
-        `Saltando ${user.username}: definí ${user.passwordEnv} en el entorno.`,
-      );
-      continue;
+  const updated = await syncOperatorPasswordsFromEnv(prisma);
+  for (const user of ["nsosa", "nwei", "ebellon", "rpardo"] as const) {
+    if (!updated.includes(user)) {
+      console.warn(`Saltando ${user}: falta PASS_* en el entorno.`);
     }
-    await upsertUser({
-      username: user.username,
-      name: user.name,
-      password,
-    });
-    updated.push(user.username);
-  }
-
-  const adminPassword = process.env.ADMIN_PASSWORD?.trim();
-  if (adminPassword) {
-    const adminUsername = (process.env.ADMIN_USERNAME ?? "admin")
-      .trim()
-      .toLowerCase();
-    await upsertUser({
-      username: adminUsername,
-      name: process.env.ADMIN_NAME ?? "Operador Sistemas",
-      password: adminPassword,
-      email: process.env.ADMIN_EMAIL ?? null,
-    });
-    updated.push(adminUsername);
   }
 
   console.log(
