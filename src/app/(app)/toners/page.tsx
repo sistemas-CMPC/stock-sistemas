@@ -72,8 +72,8 @@ export default async function TonersPage() {
       <div>
         <h1 className="text-3xl font-bold">Toners</h1>
         <p className="text-muted">
-          Stock llenos/vacíos por código de barras, vínculo con impresoras y
-          cobertura para pedir recarga a tiempo.
+          Stock sellado, toners en uso en impresoras, vacíos y cobertura para
+          pedir recarga a tiempo.
         </p>
       </div>
 
@@ -83,9 +83,10 @@ export default async function TonersPage() {
           <ul className="space-y-1 text-sm">
             {alerts.map((row) => (
               <li key={row.sku.id}>
-                <strong>{row.sku.name}</strong>: {row.sku.fullQty} lleno(s)
+                <strong>{row.sku.name}</strong>: {row.sku.fullQty} sellado(s)
+                {row.inUseQty > 0 ? `, ${row.inUseQty} en uso` : ""}
                 {row.printerCount > 0
-                  ? ` para ${row.printerCount} impresora(s)`
+                  ? ` · ${row.printerCount} impresora(s)`
                   : ""}
                 {row.status === "critical"
                   ? " — sin cobertura, pedí recarga"
@@ -106,11 +107,12 @@ export default async function TonersPage() {
               <tr>
                 <th>Toner</th>
                 <th>Código</th>
-                <th>Llenos</th>
+                <th>Sellados</th>
+                <th>En uso</th>
+                <th>Total</th>
                 <th>Vacíos</th>
                 <th>Mín.</th>
                 <th>Modelos</th>
-                <th>Impresoras</th>
                 <th>Cobertura</th>
                 <th>Estado</th>
               </tr>
@@ -130,6 +132,15 @@ export default async function TonersPage() {
                     </td>
                     <td className="font-mono text-xs">{row.sku.barcode}</td>
                     <td>{row.sku.fullQty}</td>
+                    <td title="Instalados en impresoras del modelo vinculado">
+                      {row.inUseQty}
+                    </td>
+                    <td
+                      className="font-semibold"
+                      title="Sellados + en uso (total dando vuelta)"
+                    >
+                      {row.circulatingQty}
+                    </td>
                     <td>{row.sku.emptyQty}</td>
                     <td>{row.sku.minStock}</td>
                     <td className="text-sm">
@@ -137,7 +148,6 @@ export default async function TonersPage() {
                         ? row.printerModels.join(", ")
                         : "—"}
                     </td>
-                    <td>{row.printerCount}</td>
                     <td>
                       {row.coverageRatio === null
                         ? "—"
@@ -149,7 +159,7 @@ export default async function TonersPage() {
               })}
               {coverage.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="text-muted">
+                  <td colSpan={10} className="text-muted">
                     Todavía no hay toners. Escaneá un ingreso arriba.
                   </td>
                 </tr>
@@ -158,8 +168,10 @@ export default async function TonersPage() {
           </table>
         </div>
         <p className="text-xs text-muted">
-          Cobertura = llenos ÷ impresoras del/los modelo(s) vinculados. Ideal ≥
-          1× (al menos un toner de respaldo por impresora).
+          <strong>En uso</strong> = impresoras activas del modelo vinculado (1
+          toner instalado por equipo, sin descontar del stock sellado).{" "}
+          <strong>Total</strong> = sellados + en uso. Cobertura = sellados ÷
+          impresoras (ideal ≥ 1× de respaldo).
         </p>
       </section>
 

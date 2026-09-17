@@ -155,13 +155,13 @@ export function TonerCompatManager({ skus, compats, printerModels }: Props) {
               </option>
               {skus.map((sku) => (
                 <option key={sku.id} value={sku.id}>
-                  {sku.name} · L{sku.fullQty} / V{sku.emptyQty}
+                  {sku.name} · S{sku.fullQty} / V{sku.emptyQty}
                 </option>
               ))}
             </select>
           </div>
           <div>
-            <label className="label">Llenos</label>
+            <label className="label">Sellados</label>
             <input type="number" name="fullQty" min={0} required className="input" />
           </div>
           <div>

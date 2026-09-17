@@ -283,6 +283,10 @@ export type TonerCoverageRow = {
     emptyQty: number;
     minStock: number;
   };
+  /** Impresoras activas de modelos vinculados (cada una cuenta 1 toner instalado). */
+  inUseQty: number;
+  /** Sellados + instalados en impresoras. */
+  circulatingQty: number;
   printerModels: string[];
   printerCount: number;
   coverageRatio: number | null;
@@ -324,6 +328,10 @@ export async function getTonerCoverage(): Promise<TonerCoverageRow[]> {
       return sum + (countByModelId.get(link.printerModelId) ?? 0);
     }, 0);
 
+    // Cada impresora activa del modelo vinculado tiene 1 toner de este SKU en uso.
+    const inUseQty = printerCount;
+    const circulatingQty = sku.fullQty + inUseQty;
+
     const coverageRatio =
       printerCount > 0 ? sku.fullQty / printerCount : null;
 
@@ -347,6 +355,8 @@ export async function getTonerCoverage(): Promise<TonerCoverageRow[]> {
         emptyQty: sku.emptyQty,
         minStock: sku.minStock,
       },
+      inUseQty,
+      circulatingQty,
       printerModels,
       printerCount,
       coverageRatio,

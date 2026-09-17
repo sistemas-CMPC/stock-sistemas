@@ -1,7 +1,7 @@
 "use server";
 
 import { AuthError, CredentialsSignin } from "next-auth";
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 
 function messageForAuthError(error: AuthError): string {
   const code =
@@ -39,4 +39,8 @@ export async function loginAction(
     }
     throw error;
   }
+}
+
+export async function logoutAction() {
+  await signOut({ redirectTo: "/login" });
 }

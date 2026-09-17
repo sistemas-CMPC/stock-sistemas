@@ -35,12 +35,12 @@ export default async function DashboardPage() {
 
   return (
     <div className="space-y-8">
-      <div className="flex flex-wrap items-end justify-between gap-4">
+      <div className="flex flex-col gap-4 sm:flex-row sm:flex-wrap sm:items-end sm:justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Dashboard</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Dashboard</h1>
           <p className="text-muted">Resumen del depósito técnico</p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Link href="/scan" className="btn-primary">
             Escanear
           </Link>
