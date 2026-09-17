@@ -1,18 +1,14 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { AssetLabel } from "@/components/asset-label";
 import { DeleteAssetButton } from "@/components/delete-asset-button";
 import { EditAssetForm } from "@/components/edit-asset-form";
 import { StatusBadge } from "@/components/status-badge";
-import {
-  endAssignment,
-  returnLoan,
-} from "@/app/actions/movements";
+import { endAssignment, returnLoan } from "@/app/actions/movements";
 import { retireAsset, updateBackupInfo } from "@/app/actions/catalog";
 import { addPrinterEvent, updatePrinterInfo } from "@/app/actions/printers";
 import { removeComponent } from "@/app/actions/workstations";
+import { formatDate, formatDateInput, formatDateTime } from "@/lib/datetime";
 import { MOVEMENT_TYPE_LABELS, PRINTER_EVENT_LABELS } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 
@@ -161,7 +157,7 @@ export default async function AssetDetailPage({ params }: Props) {
               className="input max-w-xs"
               defaultValue={
                 asset.backupInfo?.lastBackupAt
-                  ? format(asset.backupInfo.lastBackupAt, "yyyy-MM-dd")
+                  ? formatDateInput(asset.backupInfo.lastBackupAt)
                   : ""
               }
             />
@@ -233,9 +229,7 @@ export default async function AssetDetailPage({ params }: Props) {
             <p className="text-sm text-muted">
               Último toner:{" "}
               {asset.printerInfo?.lastTonerAt
-                ? format(asset.printerInfo.lastTonerAt, "dd/MM/yyyy HH:mm", {
-                    locale: es,
-                  })
+                ? formatDateTime(asset.printerInfo.lastTonerAt)
                 : "sin registro"}
             </p>
             <button type="submit" className="btn-primary">
@@ -280,9 +274,7 @@ export default async function AssetDetailPage({ params }: Props) {
                 {asset.printerEvents.map((event) => (
                   <tr key={event.id}>
                     <td>
-                      {format(event.createdAt, "dd/MM/yyyy HH:mm", {
-                        locale: es,
-                      })}
+                      {formatDateTime(event.createdAt)}
                     </td>
                     <td>{PRINTER_EVENT_LABELS[event.type] ?? event.type}</td>
                     <td>{event.user.name}</td>
@@ -308,9 +300,9 @@ export default async function AssetDetailPage({ params }: Props) {
           {activeLoan ? (
             <p className="text-sm">
               Prestado a <strong>{activeLoan.person.name}</strong> desde{" "}
-              {format(activeLoan.checkedOutAt, "dd/MM/yyyy HH:mm", { locale: es })}
+              {formatDateTime(activeLoan.checkedOutAt)}
               {activeLoan.dueAt
-                ? ` · vencimiento ${format(activeLoan.dueAt, "dd/MM/yyyy", { locale: es })}`
+                ? ` · vencimiento ${formatDate(activeLoan.dueAt)}`
                 : ""}
             </p>
           ) : null}
@@ -327,16 +319,14 @@ export default async function AssetDetailPage({ params }: Props) {
                 ? ` (${activePcInstall.workstation.ipAddress})`
                 : ""}{" "}
               desde{" "}
-              {format(activePcInstall.installedAt, "dd/MM/yyyy HH:mm", {
-                locale: es,
-              })}
+              {formatDateTime(activePcInstall.installedAt)}
             </p>
           ) : null}
           {activeAssignment && !activePcInstall ? (
             <p className="text-sm">
               Asignado a <strong>{activeAssignment.person.name}</strong>
               {activeAssignment.note ? ` · ${activeAssignment.note}` : ""} desde{" "}
-              {format(activeAssignment.assignedAt, "dd/MM/yyyy HH:mm", { locale: es })}
+              {formatDateTime(activeAssignment.assignedAt)}
             </p>
           ) : null}
         </div>
@@ -357,7 +347,7 @@ export default async function AssetDetailPage({ params }: Props) {
             {asset.movements.map((movement) => (
               <tr key={movement.id}>
                 <td>
-                  {format(movement.createdAt, "dd/MM/yyyy HH:mm", { locale: es })}
+                  {formatDateTime(movement.createdAt)}
                 </td>
                 <td>{MOVEMENT_TYPE_LABELS[movement.type]}</td>
                 <td>{movement.user.name}</td>

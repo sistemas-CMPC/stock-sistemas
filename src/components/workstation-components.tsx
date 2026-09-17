@@ -7,9 +7,8 @@ import {
 } from "@/app/actions/workstations";
 import { ScanInput } from "@/components/scan-input";
 import { StatusBadge } from "@/components/status-badge";
+import { formatDateTime } from "@/lib/datetime";
 import Link from "next/link";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 
 type ComponentRow = {
   id: string;
@@ -93,9 +92,7 @@ export function WorkstationComponents({
                 <td className="font-mono text-xs">{component.asset.code}</td>
                 <td>{component.asset.category.name}</td>
                 <td>
-                  {format(new Date(component.installedAt), "dd/MM/yyyy HH:mm", {
-                    locale: es,
-                  })}
+                  {formatDateTime(component.installedAt)}
                 </td>
                 <td>{component.note ?? "—"}</td>
                 <td>

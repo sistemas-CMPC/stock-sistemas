@@ -1,8 +1,7 @@
 import Link from "next/link";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { prisma } from "@/lib/prisma";
 import { StatusBadge } from "@/components/status-badge";
+import { formatDateTime, formatDate } from "@/lib/datetime";
 
 export default async function DashboardPage() {
   const [inStock, onLoan, assigned, workstationCount, overdueLoans, recentMovements] =
@@ -85,7 +84,7 @@ export default async function DashboardPage() {
                   <td>{loan.person.name}</td>
                   <td>
                     {loan.dueAt
-                      ? format(loan.dueAt, "dd/MM/yyyy", { locale: es })
+                      ? formatDate(loan.dueAt)
                       : "—"}
                   </td>
                   <td>
@@ -118,7 +117,7 @@ export default async function DashboardPage() {
             {recentMovements.map((movement) => (
               <tr key={movement.id}>
                 <td>
-                  {format(movement.createdAt, "dd/MM/yyyy HH:mm", { locale: es })}
+                  {formatDateTime(movement.createdAt)}
                 </td>
                 <td>{movement.asset.name}</td>
                 <td>{movement.type}</td>

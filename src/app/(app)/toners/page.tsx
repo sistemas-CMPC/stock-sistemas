@@ -1,11 +1,10 @@
 import Link from "next/link";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { getTonerCoverage } from "@/app/actions/toners";
 import { TonerCompatManager } from "@/components/toner-compat-manager";
 import { TonerScanPanel } from "@/components/toner-scan-panel";
 import { TONER_MOVEMENT_LABELS } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
+import { formatDateTime } from "@/lib/datetime";
 
 const STATUS_LABEL: Record<string, { label: string; className: string }> = {
   ok: { label: "OK", className: "text-ok" },
@@ -199,7 +198,7 @@ export default async function TonersPage() {
               {recentMovements.map((m) => (
                 <tr key={m.id}>
                   <td>
-                    {format(m.createdAt, "dd/MM/yyyy HH:mm", { locale: es })}
+                    {formatDateTime(m.createdAt)}
                   </td>
                   <td>{TONER_MOVEMENT_LABELS[m.type] ?? m.type}</td>
                   <td>

@@ -1,12 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { addPrinterEvent, updatePrinterInfo } from "@/app/actions/printers";
 import { consumeTonerByBarcode } from "@/app/actions/toners";
 import { ScanInput } from "@/components/scan-input";
 import { PRINTER_EVENT_LABELS } from "@/lib/labels";
+import { formatDateTime } from "@/lib/datetime";
 
 type PrinterInfo = {
   printerModelId: string | null;
@@ -110,9 +109,7 @@ export function ScanPrinterPanel({
             <dt className="text-muted">Último toner</dt>
             <dd>
               {printerInfo?.lastTonerAt
-                ? format(new Date(printerInfo.lastTonerAt), "dd/MM/yyyy HH:mm", {
-                    locale: es,
-                  })
+                ? formatDateTime(printerInfo.lastTonerAt)
                 : "Sin registro"}
             </dd>
           </div>
@@ -265,9 +262,7 @@ export function ScanPrinterPanel({
                   <span className="text-muted"> · {event.user.name}</span>
                 </span>
                 <span className="text-xs text-muted">
-                  {format(new Date(event.createdAt), "dd/MM/yyyy HH:mm", {
-                    locale: es,
-                  })}
+                  {formatDateTime(event.createdAt)}
                 </span>
               </li>
             ))}

@@ -1,8 +1,7 @@
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { MOVEMENT_TYPE_LABELS } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
 import Link from "next/link";
+import { formatDateTime } from "@/lib/datetime";
 
 export default async function MovementsPage() {
   const movements = await prisma.movement.findMany({
@@ -33,7 +32,7 @@ export default async function MovementsPage() {
             {movements.map((movement) => (
               <tr key={movement.id}>
                 <td>
-                  {format(movement.createdAt, "dd/MM/yyyy HH:mm", { locale: es })}
+                  {formatDateTime(movement.createdAt)}
                 </td>
                 <td>
                   <Link href={`/assets/${movement.assetId}`} className="text-accent">

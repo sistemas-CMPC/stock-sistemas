@@ -1,9 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { StatusBadge } from "@/components/status-badge";
 import { prisma } from "@/lib/prisma";
+import { formatDateTime } from "@/lib/datetime";
 
 type Props = { params: Promise<{ id: string }> };
 
@@ -91,11 +90,11 @@ export default async function PersonDetailPage({ params }: Props) {
                   </Link>
                 </td>
                 <td>
-                  {format(loan.checkedOutAt, "dd/MM/yyyy HH:mm", { locale: es })}
+                  {formatDateTime(loan.checkedOutAt)}
                 </td>
                 <td>
                   {loan.returnedAt
-                    ? format(loan.returnedAt, "dd/MM/yyyy HH:mm", { locale: es })
+                    ? formatDateTime(loan.returnedAt)
                     : "Pendiente"}
                 </td>
                 <td>
@@ -134,15 +133,11 @@ export default async function PersonDetailPage({ params }: Props) {
                   </Link>
                 </td>
                 <td>
-                  {format(assignment.assignedAt, "dd/MM/yyyy HH:mm", {
-                    locale: es,
-                  })}
+                  {formatDateTime(assignment.assignedAt)}
                 </td>
                 <td>
                   {assignment.endedAt
-                    ? format(assignment.endedAt, "dd/MM/yyyy HH:mm", {
-                        locale: es,
-                      })
+                    ? formatDateTime(assignment.endedAt)
                     : "Activa"}
                 </td>
                 <td>{assignment.note ?? "—"}</td>

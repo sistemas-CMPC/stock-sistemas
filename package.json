@@ -32,6 +32,7 @@
     "@zxing/library": "^0.23.0",
     "bcryptjs": "^3.0.3",
     "date-fns": "^4.4.0",
+    "date-fns-tz": "^3.2.0",
     "jsbarcode": "^3.12.3",
     "ldapts": "^9.0.0",
     "next": "15.5.22",

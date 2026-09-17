@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { updateBackupInfo } from "@/app/actions/catalog";
 import { StatusBadge } from "@/components/status-badge";
 import { prisma } from "@/lib/prisma";
+import { formatDate, formatDateInput } from "@/lib/datetime";
 
 export default async function BackupPage() {
   const disks = await prisma.asset.findMany({
@@ -60,15 +59,13 @@ export default async function BackupPage() {
                   className="input"
                   defaultValue={
                     disk.backupInfo?.lastBackupAt
-                      ? format(disk.backupInfo.lastBackupAt, "yyyy-MM-dd")
+                      ? formatDateInput(disk.backupInfo.lastBackupAt)
                       : ""
                   }
                 />
                 {disk.backupInfo?.lastBackupAt ? (
                   <p className="mt-1 text-xs text-muted">
-                    {format(disk.backupInfo.lastBackupAt, "dd/MM/yyyy", {
-                      locale: es,
-                    })}
+                    {formatDate(disk.backupInfo.lastBackupAt)}
                   </p>
                 ) : null}
               </div>

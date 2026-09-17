@@ -1,9 +1,8 @@
 import Link from "next/link";
-import { format } from "date-fns";
-import { es } from "date-fns/locale";
 import { createPrinterModel } from "@/app/actions/printers";
 import { StatusBadge } from "@/components/status-badge";
 import { prisma } from "@/lib/prisma";
+import { formatDate, formatDateTime } from "@/lib/datetime";
 
 export default async function PrintersPage() {
   const [printers, models] = await Promise.all([
@@ -174,9 +173,7 @@ export default async function PrintersPage() {
                     <dt className="text-muted">Último toner</dt>
                     <dd>
                       {printer.printerInfo?.lastTonerAt
-                        ? format(printer.printerInfo.lastTonerAt, "dd/MM/yyyy", {
-                            locale: es,
-                          })
+                        ? formatDate(printer.printerInfo.lastTonerAt)
                         : "—"}
                     </dd>
                   </div>
@@ -184,7 +181,7 @@ export default async function PrintersPage() {
                     <dt className="text-muted">Último evento</dt>
                     <dd>
                       {lastEvent
-                        ? `${lastEvent.type} · ${format(lastEvent.createdAt, "dd/MM/yyyy HH:mm", { locale: es })} · ${lastEvent.user.name}`
+                        ? `${lastEvent.type} · ${formatDateTime(lastEvent.createdAt)} · ${lastEvent.user.name}`
                         : "—"}
                     </dd>
                   </div>
