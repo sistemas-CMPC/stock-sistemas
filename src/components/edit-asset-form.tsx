@@ -29,9 +29,8 @@ export function EditAssetForm({
   categories,
 }: Props) {
   const router = useRouter();
-  const action = updateAsset.bind(null, assetId);
   const [state, formAction, pending] = useActionState(
-    action,
+    updateAsset,
     undefined as UpdateAssetState,
   );
 
@@ -43,6 +42,7 @@ export function EditAssetForm({
 
   return (
     <form action={formAction} className="card space-y-4">
+      <input type="hidden" name="assetId" value={assetId} />
       <h2 className="text-lg font-semibold">Editar</h2>
       <div>
         <label className="label" htmlFor="name">

@@ -33,9 +33,8 @@ export function EditWorkstationForm({
   people,
 }: Props) {
   const router = useRouter();
-  const action = updateWorkstation.bind(null, workstationId);
   const [state, formAction, pending] = useActionState(
-    action,
+    updateWorkstation,
     undefined as UpdateWorkstationState,
   );
 
@@ -47,6 +46,7 @@ export function EditWorkstationForm({
 
   return (
     <form action={formAction} className="card grid gap-3 md:grid-cols-2">
+      <input type="hidden" name="workstationId" value={workstationId} />
       <div>
         <label className="label">Nombre de la PC</label>
         <input name="name" required className="input" defaultValue={name} />

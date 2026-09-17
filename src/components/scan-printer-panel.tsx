@@ -51,9 +51,10 @@ export function ScanPrinterPanel({
     startTransition(async () => {
       try {
         const formData = new FormData();
+        formData.set("assetId", assetId);
         formData.set("type", type);
         if (note) formData.set("note", note);
-        await addPrinterEvent(assetId, formData);
+        await addPrinterEvent(formData);
         onDone(
           type === "TONER_CHANGE"
             ? "Cambio de toner registrado."
@@ -177,7 +178,8 @@ export function ScanPrinterPanel({
         action={(formData) => {
           startTransition(async () => {
             try {
-              await updatePrinterInfo(assetId, formData);
+              formData.set("assetId", assetId);
+              await updatePrinterInfo(formData);
               onDone("Datos de impresora actualizados.");
             } catch (err) {
               onError(err instanceof Error ? err.message : "Error");

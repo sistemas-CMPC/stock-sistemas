@@ -81,9 +81,10 @@ export default async function PeoplePage() {
                 </td>
                 <td>
                   <form
-                    action={updatePerson.bind(null, person.id)}
+                    action={updatePerson}
                     className="flex flex-wrap items-end gap-2"
                   >
+                    <input type="hidden" name="personId" value={person.id} />
                     <input type="hidden" name="name" value={person.name} />
                     <input type="hidden" name="area" value={person.area ?? ""} />
                     <label className="flex items-center gap-1 text-xs">

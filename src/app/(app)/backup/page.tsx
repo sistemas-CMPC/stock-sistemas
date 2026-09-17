@@ -41,7 +41,8 @@ export default async function BackupPage() {
               <StatusBadge status={disk.status} />
             </div>
 
-            <form action={updateBackupInfo.bind(null, disk.id)} className="grid gap-3 md:grid-cols-[1fr_200px_auto]">
+            <form action={updateBackupInfo} className="grid gap-3 md:grid-cols-[1fr_200px_auto]">
+              <input type="hidden" name="assetId" value={disk.id} />
               <div>
                 <label className="label">Qué tiene guardado</label>
                 <textarea

@@ -11,7 +11,7 @@ export function DeleteAssetButton({
 }) {
   return (
     <form
-      action={deleteAsset.bind(null, assetId)}
+      action={deleteAsset}
       onSubmit={(event) => {
         const ok = window.confirm(
           `¿Eliminar permanentemente “${assetName}”? Se borra el historial. Esta acción no se puede deshacer.`,
@@ -19,6 +19,7 @@ export function DeleteAssetButton({
         if (!ok) event.preventDefault();
       }}
     >
+      <input type="hidden" name="assetId" value={assetId} />
       <button type="submit" className="btn-danger">
         Eliminar
       </button>

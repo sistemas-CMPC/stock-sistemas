@@ -64,11 +64,15 @@ export async function createWorkstation(
 }
 
 export async function updateWorkstation(
-  workstationId: string,
   _prev: UpdateWorkstationState,
   formData: FormData,
 ): Promise<UpdateWorkstationState> {
   await requireUser();
+  const workstationId = String(formData.get("workstationId") ?? "").trim();
+  if (!workstationId) {
+    return { error: "Estación inválida" };
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   const ipAddress = String(formData.get("ipAddress") ?? "").trim();
   const notes = String(formData.get("notes") ?? "").trim();

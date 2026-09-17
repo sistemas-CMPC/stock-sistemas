@@ -25,8 +25,11 @@ export async function createPrinterModel(formData: FormData) {
   revalidatePrinter();
 }
 
-export async function updatePrinterInfo(assetId: string, formData: FormData) {
+export async function updatePrinterInfo(formData: FormData) {
   await requireUser();
+
+  const assetId = String(formData.get("assetId") ?? "").trim();
+  if (!assetId) throw new Error("Activo inválido");
 
   const printerModelId =
     String(formData.get("printerModelId") ?? "").trim() || null;
@@ -59,8 +62,13 @@ export async function updatePrinterInfo(assetId: string, formData: FormData) {
   revalidatePrinter(assetId);
 }
 
-export async function addPrinterEvent(assetId: string, formData: FormData) {
+export async function addPrinterEvent(formData: FormData) {
   const user = await requireUser();
+  const userId = user.id;
+  if (!userId) throw new Error("Sesión inválida");
+
+  const assetId = String(formData.get("assetId") ?? "").trim();
+  if (!assetId) throw new Error("Activo inválido");
 
   const typeRaw = String(formData.get("type") ?? "").trim();
   const note = String(formData.get("note") ?? "").trim() || null;
@@ -81,7 +89,7 @@ export async function addPrinterEvent(assetId: string, formData: FormData) {
       data: {
         assetId,
         type,
-        userId: user.id!,
+        userId,
         note,
       },
     });

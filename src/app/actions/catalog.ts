@@ -128,11 +128,15 @@ export async function createAsset(
 export type UpdateAssetState = { error?: string; ok?: boolean } | undefined;
 
 export async function updateAsset(
-  assetId: string,
   _prev: UpdateAssetState,
   formData: FormData,
 ): Promise<UpdateAssetState> {
   await requireUser();
+  const assetId = String(formData.get("assetId") ?? "").trim();
+  if (!assetId) {
+    return { error: "Activo inválido" };
+  }
+
   const name = String(formData.get("name") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const categoryId = String(formData.get("categoryId") ?? "");
@@ -232,8 +236,10 @@ export async function retireAsset(formData: FormData) {
 }
 
 /** Elimina el activo y su historial. Bloqueado si está prestado/asignado/en PC. */
-export async function deleteAsset(assetId: string) {
+export async function deleteAsset(formData: FormData) {
   await requireUser();
+  const assetId = String(formData.get("assetId") ?? "").trim();
+  if (!assetId) throw new Error("Activo inválido");
 
   const asset = await prisma.asset.findUnique({
     where: { id: assetId },
@@ -286,8 +292,11 @@ export async function createPerson(formData: FormData) {
   revalidatePath("/people");
 }
 
-export async function updatePerson(personId: string, formData: FormData) {
+export async function updatePerson(formData: FormData) {
   await requireUser();
+  const personId = String(formData.get("personId") ?? "").trim();
+  if (!personId) throw new Error("Persona inválida");
+
   const name = String(formData.get("name") ?? "").trim();
   const area = String(formData.get("area") ?? "").trim();
   const active = formData.get("active") === "on";
@@ -314,8 +323,11 @@ export async function createCategory(formData: FormData) {
   revalidatePath("/categories");
 }
 
-export async function updateBackupInfo(assetId: string, formData: FormData) {
+export async function updateBackupInfo(formData: FormData) {
   await requireUser();
+  const assetId = String(formData.get("assetId") ?? "").trim();
+  if (!assetId) throw new Error("Activo inválido");
+
   const description = String(formData.get("description") ?? "");
   const lastBackupRaw = String(formData.get("lastBackupAt") ?? "").trim();
   const lastBackupAt = lastBackupRaw ? new Date(lastBackupRaw) : null;

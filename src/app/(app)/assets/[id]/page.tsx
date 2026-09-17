@@ -137,7 +137,8 @@ export default async function AssetDetailPage({ params }: Props) {
       </div>
 
       {asset.category.isBackupDisk || asset.backupInfo ? (
-        <form action={updateBackupInfo.bind(null, asset.id)} className="card space-y-4">
+        <form action={updateBackupInfo} className="card space-y-4">
+          <input type="hidden" name="assetId" value={asset.id} />
           <h2 className="text-lg font-semibold">Info de backup</h2>
           <div>
             <label className="label">Qué tiene guardado</label>
@@ -170,10 +171,8 @@ export default async function AssetDetailPage({ params }: Props) {
 
       {asset.category.isPrinter || asset.printerInfo ? (
         <div className="space-y-4">
-          <form
-            action={updatePrinterInfo.bind(null, asset.id)}
-            className="card space-y-4"
-          >
+          <form action={updatePrinterInfo} className="card space-y-4">
+            <input type="hidden" name="assetId" value={asset.id} />
             <h2 className="text-lg font-semibold">Info de impresora</h2>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
@@ -240,16 +239,15 @@ export default async function AssetDetailPage({ params }: Props) {
           <div className="card space-y-4">
             <h2 className="text-lg font-semibold">Mantenimiento</h2>
             <div className="flex flex-wrap gap-2">
-              <form action={addPrinterEvent.bind(null, asset.id)}>
+              <form action={addPrinterEvent}>
+                <input type="hidden" name="assetId" value={asset.id} />
                 <input type="hidden" name="type" value="TONER_CHANGE" />
                 <button type="submit" className="btn-primary">
                   Cambiar toner
                 </button>
               </form>
-              <form
-                action={addPrinterEvent.bind(null, asset.id)}
-                className="flex flex-wrap gap-2"
-              >
+              <form action={addPrinterEvent} className="flex flex-wrap gap-2">
+                <input type="hidden" name="assetId" value={asset.id} />
                 <input type="hidden" name="type" value="REPAIR" />
                 <input
                   name="note"
