@@ -23,6 +23,9 @@ export const authConfig = {
     jwt({ token, user }) {
       if (user) {
         token.sub = user.id;
+        // Auth.js a veces usa email; guardamos también para resolver sesión huérfana
+        if (user.email) token.email = user.email;
+        if (user.name) token.name = user.name;
       }
       return token;
     },
