@@ -49,6 +49,7 @@ export async function createWorkstation(
     });
 
     revalidatePath("/workstations");
+    revalidatePath("/ips");
     redirect(`/workstations/${workstation.id}`);
   } catch (error) {
     unstable_rethrow(error);
@@ -101,6 +102,7 @@ export async function updateWorkstation(
 
     revalidatePath("/workstations");
     revalidatePath(`/workstations/${workstationId}`);
+    revalidatePath("/ips");
     return { ok: true };
   } catch (error) {
     if (

@@ -11,6 +11,8 @@ const links = [
   { href: "/assets", label: "Activos" },
   { href: "/printers", label: "Impresoras" },
   { href: "/toners", label: "Toners" },
+  { href: "/servers", label: "Servidores" },
+  { href: "/ips", label: "IPs" },
   { href: "/workstations", label: "PCs" },
   { href: "/people", label: "Clientes" },
   { href: "/backup", label: "Discos backup" },

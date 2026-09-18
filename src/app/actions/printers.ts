@@ -60,6 +60,7 @@ export async function updatePrinterInfo(formData: FormData) {
   });
 
   revalidatePrinter(assetId);
+  revalidatePath("/ips");
 }
 
 export async function addPrinterEvent(formData: FormData) {

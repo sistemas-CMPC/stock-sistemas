@@ -264,3 +264,46 @@ model Movement {
   note      String?
   createdAt DateTime     @default(now())
 }
+
+/// Servidor físico/host con VMs adentro.
+model Server {
+  id        String           @id @default(cuid())
+  name      String           @unique
+  ipAddress String?
+  notes     String?
+  active    Boolean          @default(true)
+  createdAt DateTime         @default(now())
+  updatedAt DateTime         @updatedAt
+  vms       VirtualMachine[]
+}
+
+/// Máquina virtual dentro de un servidor.
+model VirtualMachine {
+  id        String      @id @default(cuid())
+  serverId  String
+  server    Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
+  name      String
+  ipAddress String?
+  notes     String?
+  active    Boolean     @default(true)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  services  VmService[]
+
+  @@unique([serverId, name])
+  @@index([serverId])
+}
+
+/// Servicio / rol / contenedor dentro de una VM (con IP propia si aplica).
+model VmService {
+  id        String          @id @default(cuid())
+  vmId      String
+  vm        VirtualMachine  @relation(fields: [vmId], references: [id], onDelete: Cascade)
+  name      String
+  ipAddress String?
+  notes     String?
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@index([vmId])
+}
