@@ -292,22 +292,33 @@ export async function createPerson(formData: FormData) {
   revalidatePath("/people");
 }
 
-export async function updatePerson(formData: FormData) {
+export type UpdatePersonState = { error?: string; ok?: boolean } | undefined;
+
+export async function updatePerson(
+  _prev: UpdatePersonState,
+  formData: FormData,
+): Promise<UpdatePersonState> {
   await requireUser();
   const personId = String(formData.get("personId") ?? "").trim();
-  if (!personId) throw new Error("Persona inválida");
+  if (!personId) return { error: "Persona inválida" };
 
   const name = String(formData.get("name") ?? "").trim();
   const area = String(formData.get("area") ?? "").trim();
   const active = formData.get("active") === "on";
-  if (!name) throw new Error("Nombre requerido");
+  if (!name) return { error: "Nombre requerido" };
 
-  await prisma.person.update({
-    where: { id: personId },
-    data: { name, area: area || null, active },
-  });
-  revalidatePath("/people");
-  revalidatePath(`/people/${personId}`);
+  try {
+    await prisma.person.update({
+      where: { id: personId },
+      data: { name, area: area || null, active },
+    });
+    revalidatePath("/people");
+    revalidatePath(`/people/${personId}`);
+    return { ok: true };
+  } catch (error) {
+    console.error("[updatePerson]", error);
+    return { error: "No se pudo guardar. Intentá de nuevo." };
+  }
 }
 
 export async function createCategory(formData: FormData) {

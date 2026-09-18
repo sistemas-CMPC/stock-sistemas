@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { createPerson, updatePerson } from "@/app/actions/catalog";
+import { createPerson } from "@/app/actions/catalog";
 import { SyncPeopleFromAdButton } from "@/components/sync-people-button";
 import { prisma } from "@/lib/prisma";
 
@@ -27,7 +27,7 @@ export default async function PeoplePage() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-bold">Clientes</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Clientes</h1>
           <p className="text-muted">
             Personas a quienes se presta o asigna material
           </p>
@@ -67,7 +67,10 @@ export default async function PeoplePage() {
             {people.map((person) => (
               <tr key={person.id}>
                 <td>
-                  <Link href={`/people/${person.id}`} className="font-medium text-accent">
+                  <Link
+                    href={`/people/${person.id}`}
+                    className="font-medium text-accent"
+                  >
                     {person.name}
                   </Link>
                 </td>
@@ -80,28 +83,22 @@ export default async function PeoplePage() {
                   {person.loans.length + person.assignments.length} ítem(s)
                 </td>
                 <td>
-                  <form
-                    action={updatePerson}
-                    className="flex flex-wrap items-end gap-2"
+                  <Link
+                    href={`/people/${person.id}`}
+                    className="btn-secondary !py-1.5 !text-xs"
                   >
-                    <input type="hidden" name="personId" value={person.id} />
-                    <input type="hidden" name="name" value={person.name} />
-                    <input type="hidden" name="area" value={person.area ?? ""} />
-                    <label className="flex items-center gap-1 text-xs">
-                      <input
-                        type="checkbox"
-                        name="active"
-                        defaultChecked={person.active}
-                      />
-                      Activo
-                    </label>
-                    <button type="submit" className="btn-secondary !py-1 !text-xs">
-                      Actualizar
-                    </button>
-                  </form>
+                    Editar
+                  </Link>
                 </td>
               </tr>
             ))}
+            {people.length === 0 ? (
+              <tr>
+                <td colSpan={6} className="text-muted">
+                  Todavía no hay clientes.
+                </td>
+              </tr>
+            ) : null}
           </tbody>
         </table>
       </div>

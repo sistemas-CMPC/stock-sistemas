@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { EditPersonForm } from "@/components/edit-person-form";
 import { StatusBadge } from "@/components/status-badge";
 import { prisma } from "@/lib/prisma";
 import { formatDateTime } from "@/lib/datetime";
@@ -33,9 +34,21 @@ export default async function PersonDetailPage({ params }: Props) {
         <Link href="/people" className="text-sm text-accent">
           ← Clientes
         </Link>
-        <h1 className="mt-2 text-3xl font-bold">{person.name}</h1>
-        <p className="text-muted">{person.area ?? "Sin área"}</p>
+        <h1 className="mt-2 text-2xl font-bold sm:text-3xl">{person.name}</h1>
+        <p className="text-muted">
+          {person.area ?? "Sin área"}
+          {person.username ? ` · ${person.username}` : ""}
+          {person.active ? "" : " · inactivo"}
+        </p>
       </div>
+
+      <EditPersonForm
+        personId={person.id}
+        name={person.name}
+        area={person.area}
+        username={person.username}
+        active={person.active}
+      />
 
       <section className="card">
         <h2 className="mb-4 text-lg font-semibold">Estaciones de trabajo</h2>
@@ -89,9 +102,7 @@ export default async function PersonDetailPage({ params }: Props) {
                     {loan.asset.name}
                   </Link>
                 </td>
-                <td>
-                  {formatDateTime(loan.checkedOutAt)}
-                </td>
+                <td>{formatDateTime(loan.checkedOutAt)}</td>
                 <td>
                   {loan.returnedAt
                     ? formatDateTime(loan.returnedAt)
@@ -128,13 +139,14 @@ export default async function PersonDetailPage({ params }: Props) {
             {person.assignments.map((assignment) => (
               <tr key={assignment.id}>
                 <td>
-                  <Link href={`/assets/${assignment.assetId}`} className="text-accent">
+                  <Link
+                    href={`/assets/${assignment.assetId}`}
+                    className="text-accent"
+                  >
                     {assignment.asset.name}
                   </Link>
                 </td>
-                <td>
-                  {formatDateTime(assignment.assignedAt)}
-                </td>
+                <td>{formatDateTime(assignment.assignedAt)}</td>
                 <td>
                   {assignment.endedAt
                     ? formatDateTime(assignment.endedAt)
