@@ -6,6 +6,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { parseOptionalLanIp, parseOptionalLanIps } from "@/lib/lan-ip";
+import { assertLanIpsAvailable } from "@/lib/ip-inventory";
 
 function revalidateServers(serverId?: string) {
   revalidatePath("/servers");
@@ -54,6 +55,7 @@ export async function createServer(
   try {
     ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
     machine = parseMachineFields(formData);
+    await assertLanIpsAvailable(ipAddress);
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Datos inválidos" };
   }
@@ -94,6 +96,10 @@ export async function updateServer(
   try {
     ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
     machine = parseMachineFields(formData);
+    await assertLanIpsAvailable(ipAddress, {
+      kind: "server",
+      sourceId: serverId,
+    });
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Datos inválidos" };
   }
@@ -138,6 +144,7 @@ export async function createVm(formData: FormData) {
   const ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
   const machine = parseMachineFields(formData);
   const contents = optionalText(formData, "contents");
+  await assertLanIpsAvailable(ipAddress);
 
   try {
     await prisma.virtualMachine.create({
@@ -169,6 +176,7 @@ export async function updateVm(formData: FormData) {
   const ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
   const machine = parseMachineFields(formData);
   const contents = optionalText(formData, "contents");
+  await assertLanIpsAvailable(ipAddress, { kind: "vm", sourceId: vmId });
 
   try {
     await prisma.virtualMachine.update({
@@ -209,6 +217,7 @@ export async function createVmService(formData: FormData) {
   if (!name) throw new Error("Nombre del servicio/contenido requerido");
 
   const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+  await assertLanIpsAvailable(ipAddress);
 
   await prisma.vmService.create({
     data: { vmId, name, ipAddress, notes },
@@ -228,6 +237,10 @@ export async function updateVmService(formData: FormData) {
   if (!name) throw new Error("Nombre requerido");
 
   const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+  await assertLanIpsAvailable(ipAddress, {
+    kind: "vm_service",
+    sourceId: serviceId,
+  });
 
   await prisma.vmService.update({
     where: { id: serviceId },
