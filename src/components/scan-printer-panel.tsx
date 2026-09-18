@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { addPrinterEvent, updatePrinterInfo } from "@/app/actions/printers";
 import { consumeTonerByBarcode } from "@/app/actions/toners";
+import { PrinterResponsibleForm } from "@/components/printer-responsible-form";
 import { ScanInput } from "@/components/scan-input";
 import { PRINTER_EVENT_LABELS } from "@/lib/labels";
 import { formatDateTime } from "@/lib/datetime";
@@ -26,11 +27,15 @@ type PrinterEvent = {
 };
 
 type PrinterModelOption = { id: string; name: string };
+type PersonOption = { id: string; name: string; area: string | null };
 
 type Props = {
   assetId: string;
   printerInfo: PrinterInfo;
   printerModels: PrinterModelOption[];
+  people: PersonOption[];
+  responsiblePersonId?: string | null;
+  responsibleNote?: string | null;
   events: PrinterEvent[];
   onDone: (message: string) => void;
   onError: (message: string) => void;
@@ -40,6 +45,9 @@ export function ScanPrinterPanel({
   assetId,
   printerInfo,
   printerModels,
+  people,
+  responsiblePersonId = null,
+  responsibleNote = null,
   events,
   onDone,
   onError,
@@ -115,6 +123,18 @@ export function ScanPrinterPanel({
             </dd>
           </div>
         </dl>
+      </div>
+
+      <div className="rounded-lg border border-border bg-surface-2 p-3">
+        <PrinterResponsibleForm
+          assetId={assetId}
+          people={people}
+          currentPersonId={responsiblePersonId}
+          currentNote={responsibleNote}
+          compact
+          onDone={onDone}
+          onError={onError}
+        />
       </div>
 
       <div className="flex flex-wrap gap-2">

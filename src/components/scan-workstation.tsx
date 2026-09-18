@@ -154,6 +154,9 @@ export function ScanWorkstation({
                 assetId={asset.id}
                 printerInfo={asset.printerInfo}
                 printerModels={printerModels}
+                people={people}
+                responsiblePersonId={asset.assignments[0]?.personId}
+                responsibleNote={asset.assignments[0]?.note}
                 events={asset.printerEvents}
                 onDone={async (msg) => {
                   setError(null);

@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { createPrinterModel } from "@/app/actions/printers";
+import { PrinterResponsibleForm } from "@/components/printer-responsible-form";
 import { StatusBadge } from "@/components/status-badge";
 import { prisma } from "@/lib/prisma";
 import { formatDate, formatDateTime } from "@/lib/datetime";
 
 export default async function PrintersPage() {
-  const [printers, models] = await Promise.all([
+  const [printers, models, people] = await Promise.all([
     prisma.asset.findMany({
       where: {
         OR: [
@@ -36,15 +37,21 @@ export default async function PrintersPage() {
       },
       orderBy: { name: "asc" },
     }),
+    prisma.person.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, area: true },
+    }),
   ]);
 
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold">Impresoras</h1>
+          <h1 className="text-2xl font-bold sm:text-3xl">Impresoras</h1>
           <p className="text-muted">
-            Modelos, equipos, ubicación y mantenimiento. Escaneá el QR en{" "}
+            Modelos, equipos, responsable, ubicación y mantenimiento. Escaneá el
+            QR en{" "}
             <Link href="/scan" className="text-accent underline">
               Escanear
             </Link>
@@ -124,7 +131,7 @@ export default async function PrintersPage() {
             const assignment = printer.assignments[0];
             const lastEvent = printer.printerEvents[0];
             return (
-              <div key={printer.id} className="card space-y-3">
+              <div key={printer.id} className="card space-y-4">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <Link
@@ -186,6 +193,16 @@ export default async function PrintersPage() {
                     </dd>
                   </div>
                 </dl>
+
+                <div className="border-t border-border pt-3">
+                  <PrinterResponsibleForm
+                    assetId={printer.id}
+                    people={people}
+                    currentPersonId={assignment?.personId}
+                    currentNote={assignment?.note}
+                    compact
+                  />
+                </div>
               </div>
             );
           })}

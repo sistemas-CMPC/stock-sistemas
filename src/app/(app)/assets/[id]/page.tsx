@@ -8,6 +8,7 @@ import { endAssignment, returnLoan } from "@/app/actions/movements";
 import { retireAsset, updateBackupInfo } from "@/app/actions/catalog";
 import { addPrinterEvent, updatePrinterInfo } from "@/app/actions/printers";
 import { removeComponent } from "@/app/actions/workstations";
+import { PrinterResponsibleForm } from "@/components/printer-responsible-form";
 import { formatDate, formatDateInput, formatDateTime } from "@/lib/datetime";
 import { MOVEMENT_TYPE_LABELS, PRINTER_EVENT_LABELS } from "@/lib/labels";
 import { prisma } from "@/lib/prisma";
@@ -16,7 +17,7 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function AssetDetailPage({ params }: Props) {
   const { id } = await params;
-  const [asset, categories, printerModels] = await Promise.all([
+  const [asset, categories, printerModels, people] = await Promise.all([
     prisma.asset.findUnique({
       where: { id },
       include: {
@@ -55,6 +56,11 @@ export default async function AssetDetailPage({ params }: Props) {
     prisma.printerModel.findMany({
       orderBy: { name: "asc" },
       select: { id: true, name: true },
+    }),
+    prisma.person.findMany({
+      where: { active: true },
+      orderBy: { name: "asc" },
+      select: { id: true, name: true, area: true },
     }),
   ]);
 
@@ -235,6 +241,15 @@ export default async function AssetDetailPage({ params }: Props) {
               Guardar impresora
             </button>
           </form>
+
+          <div className="card space-y-3">
+            <PrinterResponsibleForm
+              assetId={asset.id}
+              people={people}
+              currentPersonId={activeAssignment?.personId}
+              currentNote={activeAssignment?.note}
+            />
+          </div>
 
           <div className="card space-y-4">
             <h2 className="text-lg font-semibold">Mantenimiento</h2>
