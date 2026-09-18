@@ -1,6 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
+import { useRouter } from "next/navigation";
 import { setPrinterResponsible } from "@/app/actions/printers";
 
 type PersonOption = {
@@ -28,6 +29,7 @@ export function PrinterResponsibleForm({
   onError,
   compact = false,
 }: Props) {
+  const router = useRouter();
   const [pending, startTransition] = useTransition();
 
   return (
@@ -42,6 +44,7 @@ export function PrinterResponsibleForm({
           try {
             formData.set("assetId", assetId);
             await setPrinterResponsible(formData);
+            router.refresh();
             onDone?.("Responsable actualizado.");
           } catch (err) {
             onError?.(err instanceof Error ? err.message : "Error");
