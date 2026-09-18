@@ -339,14 +339,26 @@ model VirtualMachine {
 
 /// Servicio / rol / contenedor dentro de una VM (con IP propia si aplica).
 model VmService {
-  id        String          @id @default(cuid())
+  id        String         @id @default(cuid())
   vmId      String
-  vm        VirtualMachine  @relation(fields: [vmId], references: [id], onDelete: Cascade)
+  vm        VirtualMachine @relation(fields: [vmId], references: [id], onDelete: Cascade)
   name      String
   ipAddress String?
   notes     String?
-  createdAt DateTime        @default(now())
-  updatedAt DateTime        @updatedAt
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
 
   @@index([vmId])
+}
+
+/// Reserva rápida de IP en la LAN (MikroTik, AP, cámara, etc. sin ficha de stock).
+model IpReservation {
+  id        String   @id @default(cuid())
+  /// IP única en 192.168.0.x
+  ipAddress String   @unique
+  /// Qué la ocupa (ej. MikroTik, AP sala, cámara patio)
+  label     String
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

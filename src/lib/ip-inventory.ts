@@ -34,7 +34,8 @@ function pushOccupant(
 export async function collectOccupiedIps(): Promise<Map<number, IpOccupant[]>> {
   const byHost = new Map<number, IpOccupant[]>();
 
-  const [workstations, printers, servers, vms, services] = await Promise.all([
+  const [workstations, printers, servers, vms, services, reservations] =
+    await Promise.all([
     prisma.workstation.findMany({
       where: { ipAddress: { not: null } },
       select: { id: true, name: true, ipAddress: true, active: true },
@@ -76,6 +77,9 @@ export async function collectOccupiedIps(): Promise<Map<number, IpOccupant[]>> {
           },
         },
       },
+    }),
+    prisma.ipReservation.findMany({
+      select: { id: true, ipAddress: true, label: true, notes: true },
     }),
   ]);
 
@@ -127,6 +131,17 @@ export async function collectOccupiedIps(): Promise<Map<number, IpOccupant[]>> {
       name: service.name,
       detail: `VM ${service.vm.name} · ${service.vm.server.name}`,
       href: `/servers/${service.vm.serverId}`,
+    });
+  }
+
+  for (const reservation of reservations) {
+    pushOccupant(byHost, reservation.ipAddress, {
+      kind: "reservation",
+      kindLabel: IP_KIND_LABELS.reservation,
+      name: reservation.label,
+      detail: reservation.notes ?? undefined,
+      href: `/ips?q=${encodeURIComponent(reservation.ipAddress)}`,
+      reservationId: reservation.id,
     });
   }
 

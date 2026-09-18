@@ -108,7 +108,8 @@ export type IpKind =
   | "printer"
   | "server"
   | "vm"
-  | "vm_service";
+  | "vm_service"
+  | "reservation";
 
 export type IpOccupant = {
   ip: string;
@@ -118,6 +119,8 @@ export type IpOccupant = {
   name: string;
   detail?: string;
   href: string;
+  /** Solo para reservas rápidas de /ips */
+  reservationId?: string;
 };
 
 export const IP_KIND_LABELS: Record<IpKind, string> = {
@@ -126,4 +129,5 @@ export const IP_KIND_LABELS: Record<IpKind, string> = {
   server: "Servidor",
   vm: "VM",
   vm_service: "Servicio VM",
+  reservation: "Red / otro",
 };

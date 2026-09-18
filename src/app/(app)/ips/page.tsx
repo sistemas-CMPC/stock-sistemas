@@ -1,9 +1,11 @@
 import Link from "next/link";
+import { DeleteIpReservationButton } from "@/components/delete-ip-reservation-button";
+import { RegisterIpForm } from "@/components/register-ip-form";
 import { getIpInventory } from "@/lib/ip-inventory";
 import { LAN_HOST_MAX, LAN_HOST_MIN, LAN_PREFIX } from "@/lib/lan-ip";
 
 type Props = {
-  searchParams: Promise<{ q?: string; filter?: string }>;
+  searchParams: Promise<{ q?: string; filter?: string; reserve?: string }>;
 };
 
 export default async function IpsPage({ searchParams }: Props) {
@@ -12,6 +14,7 @@ export default async function IpsPage({ searchParams }: Props) {
   const filterRaw = params.filter ?? "all";
   const filter =
     filterRaw === "free" || filterRaw === "occupied" ? filterRaw : "all";
+  const reserveIp = params.reserve?.trim() ?? "";
 
   const { slots, freeCount, occupiedCount, conflictCount } =
     await getIpInventory({ filter, query });
@@ -29,7 +32,8 @@ export default async function IpsPage({ searchParams }: Props) {
         <p className="text-muted">
           Rango {LAN_PREFIX}
           {LAN_HOST_MIN} – {LAN_PREFIX}
-          {LAN_HOST_MAX}. Reúne PCs, impresoras, servidores, VMs y servicios.
+          {LAN_HOST_MAX}. PCs, impresoras, servidores, VMs y reservas rápidas
+          (MikroTik, AP, etc.).
         </p>
       </div>
 
@@ -48,6 +52,8 @@ export default async function IpsPage({ searchParams }: Props) {
         </div>
       </div>
 
+      <RegisterIpForm defaultIp={reserveIp} />
+
       <form className="card flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-end">
         <div className="min-w-[12rem] flex-1">
           <label className="label" htmlFor="q">
@@ -58,7 +64,7 @@ export default async function IpsPage({ searchParams }: Props) {
             name="q"
             className="input"
             defaultValue={query}
-            placeholder="IP, nombre, PC, VM…"
+            placeholder="IP, MikroTik, PC, VM…"
           />
         </div>
         <div>
@@ -120,6 +126,7 @@ export default async function IpsPage({ searchParams }: Props) {
               <th>IP</th>
               <th>Estado</th>
               <th>Ocupada por</th>
+              <th></th>
             </tr>
           </thead>
           <tbody>
@@ -141,28 +148,49 @@ export default async function IpsPage({ searchParams }: Props) {
                   ) : (
                     <ul className="space-y-1">
                       {slot.occupants.map((occupant, index) => (
-                        <li key={`${occupant.href}-${index}`}>
-                          <Link
-                            href={occupant.href}
-                            className="font-medium text-accent"
-                          >
-                            {occupant.name}
-                          </Link>
+                        <li
+                          key={`${occupant.href}-${index}`}
+                          className="flex flex-wrap items-center gap-2"
+                        >
+                          {occupant.kind === "reservation" ? (
+                            <span className="font-medium">{occupant.name}</span>
+                          ) : (
+                            <Link
+                              href={occupant.href}
+                              className="font-medium text-accent"
+                            >
+                              {occupant.name}
+                            </Link>
+                          )}
                           <span className="text-muted">
-                            {" "}
                             · {occupant.kindLabel}
                             {occupant.detail ? ` · ${occupant.detail}` : ""}
                           </span>
+                          {occupant.reservationId ? (
+                            <DeleteIpReservationButton
+                              id={occupant.reservationId}
+                            />
+                          ) : null}
                         </li>
                       ))}
                     </ul>
                   )}
                 </td>
+                <td>
+                  {slot.status === "free" ? (
+                    <Link
+                      href={`/ips?reserve=${encodeURIComponent(slot.ip)}`}
+                      className="btn-secondary !py-1 !text-xs"
+                    >
+                      Reservar
+                    </Link>
+                  ) : null}
+                </td>
               </tr>
             ))}
             {slots.length === 0 ? (
               <tr>
-                <td colSpan={3} className="text-muted">
+                <td colSpan={4} className="text-muted">
                   No hay resultados con ese filtro.
                 </td>
               </tr>
