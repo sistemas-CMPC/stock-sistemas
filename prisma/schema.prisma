@@ -270,6 +270,15 @@ model Server {
   id        String           @id @default(cuid())
   name      String           @unique
   ipAddress String?
+  /// Sistema operativo (ej. Windows Server 2022, ESXi 8, Proxmox)
+  os        String?
+  /// Usuario con el que se entra (sin contraseña)
+  username  String?
+  vcpu      Int?
+  /// RAM en GB
+  ramGb     Int?
+  /// Discos / almacenamiento (texto libre: "2×500GB SSD, 1TB HDD")
+  disks     String?
   notes     String?
   active    Boolean          @default(true)
   createdAt DateTime         @default(now())
@@ -284,6 +293,13 @@ model VirtualMachine {
   server    Server      @relation(fields: [serverId], references: [id], onDelete: Cascade)
   name      String
   ipAddress String?
+  os        String?
+  username  String?
+  vcpu      Int?
+  ramGb     Int?
+  disks     String?
+  /// Qué corre / roles adentro (texto libre, además de servicios listados)
+  contents  String?
   notes     String?
   active    Boolean     @default(true)
   createdAt DateTime    @default(now())

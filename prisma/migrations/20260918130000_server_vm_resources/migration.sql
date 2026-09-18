@@ -1,0 +1,14 @@
+-- AlterTable
+ALTER TABLE "Server" ADD COLUMN "os" TEXT,
+ADD COLUMN "username" TEXT,
+ADD COLUMN "vcpu" INTEGER,
+ADD COLUMN "ramGb" INTEGER,
+ADD COLUMN "disks" TEXT;
+
+-- AlterTable
+ALTER TABLE "VirtualMachine" ADD COLUMN "os" TEXT,
+ADD COLUMN "username" TEXT,
+ADD COLUMN "vcpu" INTEGER,
+ADD COLUMN "ramGb" INTEGER,
+ADD COLUMN "disks" TEXT,
+ADD COLUMN "contents" TEXT;

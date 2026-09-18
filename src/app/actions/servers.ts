@@ -13,6 +13,32 @@ function revalidateServers(serverId?: string) {
   if (serverId) revalidatePath(`/servers/${serverId}`);
 }
 
+function optionalText(formData: FormData, key: string): string | null {
+  const value = String(formData.get(key) ?? "").trim();
+  return value || null;
+}
+
+function optionalPositiveInt(formData: FormData, key: string): number | null {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (!raw) return null;
+  const value = Number(raw);
+  if (!Number.isFinite(value) || value < 0 || !Number.isInteger(value)) {
+    throw new Error(`${key} debe ser un número entero ≥ 0`);
+  }
+  return value;
+}
+
+function parseMachineFields(formData: FormData) {
+  return {
+    os: optionalText(formData, "os"),
+    username: optionalText(formData, "username"),
+    vcpu: optionalPositiveInt(formData, "vcpu"),
+    ramGb: optionalPositiveInt(formData, "ramGb"),
+    disks: optionalText(formData, "disks"),
+    notes: optionalText(formData, "notes"),
+  };
+}
+
 export type ServerFormState = { error?: string; ok?: boolean } | undefined;
 
 export async function createServer(
@@ -21,20 +47,20 @@ export async function createServer(
 ): Promise<ServerFormState> {
   await requireUser();
   const name = String(formData.get("name") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim() || null;
-
   if (!name) return { error: "El nombre del servidor es obligatorio" };
 
   let ipAddress: string | null;
+  let machine;
   try {
     ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+    machine = parseMachineFields(formData);
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "IP inválida" };
+    return { error: error instanceof Error ? error.message : "Datos inválidos" };
   }
 
   try {
     const server = await prisma.server.create({
-      data: { name, ipAddress, notes },
+      data: { name, ipAddress, ...machine },
     });
     revalidateServers(server.id);
     redirect(`/servers/${server.id}`);
@@ -60,22 +86,22 @@ export async function updateServer(
   if (!serverId) return { error: "Servidor inválido" };
 
   const name = String(formData.get("name") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim() || null;
   const active = formData.get("active") === "on";
-
   if (!name) return { error: "El nombre del servidor es obligatorio" };
 
   let ipAddress: string | null;
+  let machine;
   try {
     ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+    machine = parseMachineFields(formData);
   } catch (error) {
-    return { error: error instanceof Error ? error.message : "IP inválida" };
+    return { error: error instanceof Error ? error.message : "Datos inválidos" };
   }
 
   try {
     await prisma.server.update({
       where: { id: serverId },
-      data: { name, ipAddress, notes, active },
+      data: { name, ipAddress, active, ...machine },
     });
     revalidateServers(serverId);
     return { ok: true };
@@ -107,14 +133,15 @@ export async function createVm(formData: FormData) {
   if (!serverId) throw new Error("Servidor inválido");
 
   const name = String(formData.get("name") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim() || null;
   if (!name) throw new Error("Nombre de la VM requerido");
 
   const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+  const machine = parseMachineFields(formData);
+  const contents = optionalText(formData, "contents");
 
   try {
     await prisma.virtualMachine.create({
-      data: { serverId, name, ipAddress, notes },
+      data: { serverId, name, ipAddress, contents, ...machine },
     });
   } catch (error) {
     if (
@@ -136,16 +163,17 @@ export async function updateVm(formData: FormData) {
   if (!vmId || !serverId) throw new Error("VM inválida");
 
   const name = String(formData.get("name") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim() || null;
   const active = formData.get("active") === "on";
   if (!name) throw new Error("Nombre de la VM requerido");
 
   const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+  const machine = parseMachineFields(formData);
+  const contents = optionalText(formData, "contents");
 
   try {
     await prisma.virtualMachine.update({
       where: { id: vmId },
-      data: { name, ipAddress, notes, active },
+      data: { name, ipAddress, active, contents, ...machine },
     });
   } catch (error) {
     if (
@@ -177,7 +205,7 @@ export async function createVmService(formData: FormData) {
   if (!vmId || !serverId) throw new Error("VM inválida");
 
   const name = String(formData.get("name") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const notes = optionalText(formData, "notes");
   if (!name) throw new Error("Nombre del servicio/contenido requerido");
 
   const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
@@ -196,7 +224,7 @@ export async function updateVmService(formData: FormData) {
   if (!serviceId || !serverId) throw new Error("Servicio inválido");
 
   const name = String(formData.get("name") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim() || null;
+  const notes = optionalText(formData, "notes");
   if (!name) throw new Error("Nombre requerido");
 
   const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));

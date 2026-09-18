@@ -23,6 +23,14 @@ export default async function ServerDetailPage({ params }: Props) {
 
   if (!server) notFound();
 
+  const resources = [
+    server.vcpu != null ? `${server.vcpu} vCPU` : null,
+    server.ramGb != null ? `${server.ramGb} GB RAM` : null,
+    server.disks,
+  ]
+    .filter(Boolean)
+    .join(" · ");
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -33,8 +41,11 @@ export default async function ServerDetailPage({ params }: Props) {
           <h1 className="mt-2 text-2xl font-bold sm:text-3xl">{server.name}</h1>
           <p className="text-muted">
             {server.ipAddress ? `IP ${server.ipAddress}` : "Sin IP"}
+            {server.os ? ` · ${server.os}` : ""}
+            {server.username ? ` · ${server.username}` : ""}
             {server.active ? "" : " · inactivo"}
           </p>
+          {resources ? <p className="mt-1 text-sm text-muted">{resources}</p> : null}
         </div>
         <DeleteServerButton serverId={server.id} serverName={server.name} />
       </div>
@@ -43,6 +54,11 @@ export default async function ServerDetailPage({ params }: Props) {
         serverId={server.id}
         name={server.name}
         ipAddress={server.ipAddress}
+        os={server.os}
+        username={server.username}
+        vcpu={server.vcpu}
+        ramGb={server.ramGb}
+        disks={server.disks}
         notes={server.notes}
         active={server.active}
       />

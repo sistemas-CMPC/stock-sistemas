@@ -21,7 +21,7 @@ export default async function ServersPage() {
         <div>
           <h1 className="text-2xl font-bold sm:text-3xl">Servidores</h1>
           <p className="text-muted">
-            Hosts, VMs internas y servicios con sus IPs. Mirá el mapa LAN en{" "}
+            Hosts con IP, SO, usuario, recursos y VMs. Mapa LAN en{" "}
             <Link href="/ips" className="text-accent underline">
               IPs
             </Link>
@@ -38,17 +38,23 @@ export default async function ServersPage() {
             <tr>
               <th>Nombre</th>
               <th>IP</th>
+              <th>SO</th>
+              <th>Usuario</th>
+              <th>Recursos</th>
               <th>VMs</th>
-              <th>Servicios</th>
               <th>Estado</th>
             </tr>
           </thead>
           <tbody>
             {servers.map((server) => {
-              const serviceCount = server.vms.reduce(
-                (sum, vm) => sum + vm._count.services,
-                0,
-              );
+              const resources = [
+                server.vcpu != null ? `${server.vcpu} vCPU` : null,
+                server.ramGb != null ? `${server.ramGb} GB` : null,
+                server.disks,
+              ]
+                .filter(Boolean)
+                .join(" · ");
+
               return (
                 <tr key={server.id}>
                   <td>
@@ -62,15 +68,19 @@ export default async function ServersPage() {
                   <td className="font-mono text-sm">
                     {server.ipAddress ?? "—"}
                   </td>
+                  <td className="text-sm">{server.os ?? "—"}</td>
+                  <td className="font-mono text-sm">
+                    {server.username ?? "—"}
+                  </td>
+                  <td className="text-sm">{resources || "—"}</td>
                   <td>{server._count.vms}</td>
-                  <td>{serviceCount}</td>
                   <td>{server.active ? "Activo" : "Inactivo"}</td>
                 </tr>
               );
             })}
             {servers.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-muted">
+                <td colSpan={7} className="text-muted">
                   Todavía no hay servidores. Creá el primero arriba.
                 </td>
               </tr>
