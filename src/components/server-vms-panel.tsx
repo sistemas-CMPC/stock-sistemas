@@ -66,11 +66,11 @@ export function ServerVmsPanel({
           />
         </div>
         <div>
-          <label className="label">IP</label>
+          <label className="label">IP(s)</label>
           <input
             name="ipAddress"
             className="input font-mono"
-            placeholder="192.168.0.20"
+            placeholder="192.168.0.20, 192.168.0.21"
           />
         </div>
         <div>
@@ -184,11 +184,12 @@ export function ServerVmsPanel({
               />
             </div>
             <div>
-              <label className="label">IP</label>
+              <label className="label">IP(s)</label>
               <input
                 name="ipAddress"
                 className="input font-mono"
                 defaultValue={vm.ipAddress ?? ""}
+                placeholder="192.168.0.20, 192.168.0.21"
               />
             </div>
             <div>

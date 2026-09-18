@@ -21,12 +21,15 @@ export function CreateServerForm() {
         />
       </div>
       <div>
-        <label className="label">IP</label>
+        <label className="label">IP(s)</label>
         <input
           name="ipAddress"
           className="input font-mono"
-          placeholder="192.168.0.10"
+          placeholder="192.168.0.23, 192.168.0.22"
         />
+        <p className="mt-1 text-xs text-muted">
+          Varias placas: separá con coma
+        </p>
       </div>
       <div>
         <label className="label">Sistema operativo</label>
@@ -62,8 +65,12 @@ export function CreateServerForm() {
         />
       </div>
       <div className="sm:col-span-2 lg:col-span-3">
-        <label className="label">Notas</label>
-        <input name="notes" className="input" placeholder="Opcional" />
+        <label className="label">Notas / modelo</label>
+        <input
+          name="notes"
+          className="input"
+          placeholder="Ej. HP ProLiant ML110 Gen9"
+        />
       </div>
       {state?.error ? (
         <p className="text-sm text-danger sm:col-span-2 lg:col-span-3">{state.error}</p>

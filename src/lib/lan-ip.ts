@@ -52,6 +52,57 @@ export function parseOptionalLanIp(raw: string): string | null {
   return normalized;
 }
 
+/**
+ * Una o varias IPs LAN (placas de red), separadas por coma, ; o espacio.
+ * Guarda como "192.168.0.23, 192.168.0.22" sin duplicados.
+ */
+export function parseOptionalLanIps(raw: string): string | null {
+  const trimmed = raw.trim();
+  if (!trimmed) return null;
+
+  const parts = trimmed
+    .split(/[,;\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+
+  if (parts.length === 0) return null;
+
+  const normalized: string[] = [];
+  const seen = new Set<string>();
+
+  for (const part of parts) {
+    const ip = normalizeLanIp(part);
+    if (!ip) {
+      throw new Error(
+        `IP inválida: usá 192.168.0.1–192.168.0.255 (recibido “${part}”)`,
+      );
+    }
+    if (seen.has(ip)) continue;
+    seen.add(ip);
+    normalized.push(ip);
+  }
+
+  return normalized.join(", ");
+}
+
+/** Extrae todas las IPs LAN de un campo que puede traer varias. */
+export function extractLanIps(raw: string | null | undefined): string[] {
+  if (!raw?.trim()) return [];
+  const parts = raw
+    .split(/[,;\s]+/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+  const result: string[] = [];
+  const seen = new Set<string>();
+  for (const part of parts) {
+    const ip = normalizeLanIp(part);
+    if (!ip || seen.has(ip)) continue;
+    seen.add(ip);
+    result.push(ip);
+  }
+  return result;
+}
+
 export type IpKind =
   | "workstation"
   | "printer"

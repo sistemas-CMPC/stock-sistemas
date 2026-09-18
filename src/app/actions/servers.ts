@@ -5,7 +5,7 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
-import { parseOptionalLanIp } from "@/lib/lan-ip";
+import { parseOptionalLanIp, parseOptionalLanIps } from "@/lib/lan-ip";
 
 function revalidateServers(serverId?: string) {
   revalidatePath("/servers");
@@ -52,7 +52,7 @@ export async function createServer(
   let ipAddress: string | null;
   let machine;
   try {
-    ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+    ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
     machine = parseMachineFields(formData);
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Datos inválidos" };
@@ -92,7 +92,7 @@ export async function updateServer(
   let ipAddress: string | null;
   let machine;
   try {
-    ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+    ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
     machine = parseMachineFields(formData);
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Datos inválidos" };
@@ -135,7 +135,7 @@ export async function createVm(formData: FormData) {
   const name = String(formData.get("name") ?? "").trim();
   if (!name) throw new Error("Nombre de la VM requerido");
 
-  const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+  const ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
   const machine = parseMachineFields(formData);
   const contents = optionalText(formData, "contents");
 
@@ -166,7 +166,7 @@ export async function updateVm(formData: FormData) {
   const active = formData.get("active") === "on";
   if (!name) throw new Error("Nombre de la VM requerido");
 
-  const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
+  const ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
   const machine = parseMachineFields(formData);
   const contents = optionalText(formData, "contents");
 

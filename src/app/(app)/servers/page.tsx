@@ -38,7 +38,7 @@ export default async function ServersPage() {
             <tr>
               <th>Nombre</th>
               <th>IP</th>
-              <th>SO</th>
+              <th>Notas</th>
               <th>Usuario</th>
               <th>Recursos</th>
               <th>VMs</th>
@@ -68,7 +68,7 @@ export default async function ServersPage() {
                   <td className="font-mono text-sm">
                     {server.ipAddress ?? "—"}
                   </td>
-                  <td className="text-sm">{server.os ?? "—"}</td>
+                  <td className="text-sm">{server.notes ?? "—"}</td>
                   <td className="font-mono text-sm">
                     {server.username ?? "—"}
                   </td>

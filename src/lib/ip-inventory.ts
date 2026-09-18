@@ -4,7 +4,7 @@ import {
   LAN_HOST_MAX,
   LAN_HOST_MIN,
   LAN_PREFIX,
-  normalizeLanIp,
+  extractLanIps,
   type IpOccupant,
 } from "@/lib/lan-ip";
 
@@ -22,12 +22,12 @@ function pushOccupant(
   rawIp: string | null | undefined,
   occupant: Omit<IpOccupant, "ip" | "host">,
 ) {
-  const ip = normalizeLanIp(rawIp);
-  if (!ip) return;
-  const host = Number(ip.slice(LAN_PREFIX.length));
-  const list = byHost.get(host) ?? [];
-  list.push({ ...occupant, ip, host });
-  byHost.set(host, list);
+  for (const ip of extractLanIps(rawIp)) {
+    const host = Number(ip.slice(LAN_PREFIX.length));
+    const list = byHost.get(host) ?? [];
+    list.push({ ...occupant, ip, host });
+    byHost.set(host, list);
+  }
 }
 
 /** Reúne todas las IPs LAN cargadas en el sistema. */

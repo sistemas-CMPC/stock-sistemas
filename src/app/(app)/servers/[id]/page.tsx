@@ -41,8 +41,7 @@ export default async function ServerDetailPage({ params }: Props) {
           <h1 className="mt-2 text-2xl font-bold sm:text-3xl">{server.name}</h1>
           <p className="text-muted">
             {server.ipAddress ? `IP ${server.ipAddress}` : "Sin IP"}
-            {server.os ? ` · ${server.os}` : ""}
-            {server.username ? ` · ${server.username}` : ""}
+            {server.notes ? ` · ${server.notes}` : ""}
             {server.active ? "" : " · inactivo"}
           </p>
           {resources ? <p className="mt-1 text-sm text-muted">{resources}</p> : null}

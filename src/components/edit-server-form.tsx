@@ -47,13 +47,16 @@ export function EditServerForm({
         <input name="name" required className="input" defaultValue={name} />
       </div>
       <div>
-        <label className="label">IP</label>
+        <label className="label">IP(s)</label>
         <input
           name="ipAddress"
           className="input font-mono"
           defaultValue={ipAddress ?? ""}
-          placeholder="192.168.0.10"
+          placeholder="192.168.0.23, 192.168.0.22"
         />
+        <p className="mt-1 text-xs text-muted">
+          Varias placas: separá con coma
+        </p>
       </div>
       <div>
         <label className="label">Sistema operativo</label>
@@ -95,8 +98,13 @@ export function EditServerForm({
         <input name="disks" className="input" defaultValue={disks ?? ""} />
       </div>
       <div className="sm:col-span-2 lg:col-span-3">
-        <label className="label">Notas</label>
-        <input name="notes" className="input" defaultValue={notes ?? ""} />
+        <label className="label">Notas / modelo</label>
+        <input
+          name="notes"
+          className="input"
+          defaultValue={notes ?? ""}
+          placeholder="Ej. HP ProLiant ML110 Gen9"
+        />
       </div>
       <label className="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-3">
         <input type="checkbox" name="active" defaultChecked={active} />
