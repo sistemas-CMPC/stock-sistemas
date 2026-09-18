@@ -20,8 +20,7 @@ export default async function ScanPage() {
       <div>
         <h1 className="text-3xl font-bold">Escanear</h1>
         <p className="text-muted">
-          Salidas (préstamo o asignación), ingresos e info de impresoras por
-          pistola/QR
+          Activos, impresoras y PCs por pistola/QR
         </p>
       </div>
       {people.length === 0 ? (

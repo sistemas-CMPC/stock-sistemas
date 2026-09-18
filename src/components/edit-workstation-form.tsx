@@ -17,7 +17,12 @@ type Props = {
   workstationId: string;
   name: string;
   ipAddress: string | null;
+  os: string | null;
+  ram: string | null;
+  diskType: string | null;
+  storage: string | null;
   notes: string | null;
+  lastMaintenanceAt: string | null;
   personId: string | null;
   active: boolean;
   people: PersonOption[];
@@ -27,7 +32,12 @@ export function EditWorkstationForm({
   workstationId,
   name,
   ipAddress,
+  os,
+  ram,
+  diskType,
+  storage,
   notes,
+  lastMaintenanceAt,
   personId,
   active,
   people,
@@ -45,14 +55,14 @@ export function EditWorkstationForm({
   }, [state?.ok, router]);
 
   return (
-    <form action={formAction} className="card grid gap-3 md:grid-cols-2">
+    <form action={formAction} className="card grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
       <input type="hidden" name="workstationId" value={workstationId} />
       <div>
         <label className="label">Nombre de la PC</label>
         <input name="name" required className="input" defaultValue={name} />
       </div>
       <div>
-        <label className="label">IP</label>
+        <label className="label">IP(s)</label>
         <input
           name="ipAddress"
           className="input font-mono"
@@ -60,7 +70,7 @@ export function EditWorkstationForm({
         />
       </div>
       <div>
-        <label className="label">Quién la tiene</label>
+        <label className="label">Quién la usa</label>
         <select name="personId" className="input" defaultValue={personId ?? ""}>
           <option value="">Sin asignar</option>
           {people.map((person) => (
@@ -72,20 +82,51 @@ export function EditWorkstationForm({
         </select>
       </div>
       <div>
-        <label className="label">Notas</label>
-        <input name="notes" className="input" defaultValue={notes ?? ""} />
+        <label className="label">Sistema operativo</label>
+        <input name="os" className="input" defaultValue={os ?? ""} />
       </div>
-      <label className="flex items-center gap-2 text-sm md:col-span-2">
+      <div>
+        <label className="label">RAM</label>
+        <input name="ram" className="input" defaultValue={ram ?? ""} />
+      </div>
+      <div>
+        <label className="label">Tipo de disco</label>
+        <input name="diskType" className="input" defaultValue={diskType ?? ""} />
+      </div>
+      <div>
+        <label className="label">Almacenamiento</label>
+        <input name="storage" className="input" defaultValue={storage ?? ""} />
+      </div>
+      <div>
+        <label className="label">Último mantenimiento</label>
+        <input
+          name="lastMaintenanceAt"
+          type="date"
+          className="input"
+          defaultValue={lastMaintenanceAt ?? ""}
+        />
+      </div>
+      <div className="sm:col-span-2 lg:col-span-3">
+        <label className="label">Notas</label>
+        <textarea
+          name="notes"
+          className="input"
+          rows={2}
+          defaultValue={notes ?? ""}
+          placeholder="Arreglos, particularidades…"
+        />
+      </div>
+      <label className="flex items-center gap-2 text-sm sm:col-span-2 lg:col-span-3">
         <input type="checkbox" name="active" defaultChecked={active} />
         Estación activa
       </label>
       {state?.error ? (
-        <p className="text-sm text-danger md:col-span-2">{state.error}</p>
+        <p className="text-sm text-danger sm:col-span-2 lg:col-span-3">{state.error}</p>
       ) : null}
       {state?.ok ? (
-        <p className="text-sm text-ok md:col-span-2">Cambios guardados.</p>
+        <p className="text-sm text-ok sm:col-span-2 lg:col-span-3">Cambios guardados.</p>
       ) : null}
-      <div className="md:col-span-2">
+      <div className="sm:col-span-2 lg:col-span-3">
         <button type="submit" className="btn-secondary" disabled={pending}>
           {pending ? "Guardando…" : "Guardar cambios"}
         </button>

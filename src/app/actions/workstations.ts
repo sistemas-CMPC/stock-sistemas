@@ -5,12 +5,39 @@ import { redirect, unstable_rethrow } from "next/navigation";
 import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { generateAssetCode } from "@/lib/labels";
+import { parseOptionalLanIps } from "@/lib/lan-ip";
 
 export type CreateWorkstationState = { error?: string } | undefined;
 export type UpdateWorkstationState = { error?: string; ok?: boolean } | undefined;
 
 function duplicateNameMessage(name: string) {
   return `Ya existe una estación con el nombre “${name}”. Elegí otro nombre o editá la existente.`;
+}
+
+function optionalText(formData: FormData, key: string): string | null {
+  const value = String(formData.get(key) ?? "").trim();
+  return value || null;
+}
+
+function parseOptionalDate(formData: FormData, key: string): Date | null {
+  const raw = String(formData.get(key) ?? "").trim();
+  if (!raw) return null;
+  const date = new Date(raw);
+  if (Number.isNaN(date.getTime())) {
+    throw new Error("Fecha de mantenimiento inválida");
+  }
+  return date;
+}
+
+function parseWorkstationFields(formData: FormData) {
+  return {
+    os: optionalText(formData, "os"),
+    ram: optionalText(formData, "ram"),
+    diskType: optionalText(formData, "diskType"),
+    storage: optionalText(formData, "storage"),
+    notes: optionalText(formData, "notes"),
+  };
 }
 
 async function findDuplicateWorkstationName(name: string, excludeId?: string) {
@@ -20,15 +47,20 @@ async function findDuplicateWorkstationName(name: string, excludeId?: string) {
   });
 }
 
+function revalidateWorkstation(workstationId?: string) {
+  revalidatePath("/workstations");
+  revalidatePath("/ips");
+  revalidatePath("/scan");
+  if (workstationId) revalidatePath(`/workstations/${workstationId}`);
+}
+
 export async function createWorkstation(
   _prev: CreateWorkstationState,
   formData: FormData,
 ): Promise<CreateWorkstationState> {
   await requireUser();
   const name = String(formData.get("name") ?? "").trim();
-  const ipAddress = String(formData.get("ipAddress") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
-  const personId = String(formData.get("personId") ?? "").trim();
+  const personId = String(formData.get("personId") ?? "").trim() || null;
 
   if (!name) {
     return { error: "El nombre de la PC es obligatorio" };
@@ -38,18 +70,32 @@ export async function createWorkstation(
     return { error: duplicateNameMessage(name) };
   }
 
+  let ipAddress: string | null;
+  let lastMaintenanceAt: Date | null;
+  let fields;
+  try {
+    ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
+    lastMaintenanceAt = parseOptionalDate(formData, "lastMaintenanceAt");
+    fields = parseWorkstationFields(formData);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Datos inválidos" };
+  }
+
+  const code = generateAssetCode("PC");
+
   try {
     const workstation = await prisma.workstation.create({
       data: {
+        code,
         name,
-        ipAddress: ipAddress || null,
-        notes: notes || null,
-        personId: personId || null,
+        ipAddress,
+        personId,
+        lastMaintenanceAt,
+        ...fields,
       },
     });
 
-    revalidatePath("/workstations");
-    revalidatePath("/ips");
+    revalidateWorkstation(workstation.id);
     redirect(`/workstations/${workstation.id}`);
   } catch (error) {
     unstable_rethrow(error);
@@ -75,9 +121,7 @@ export async function updateWorkstation(
   }
 
   const name = String(formData.get("name") ?? "").trim();
-  const ipAddress = String(formData.get("ipAddress") ?? "").trim();
-  const notes = String(formData.get("notes") ?? "").trim();
-  const personId = String(formData.get("personId") ?? "").trim();
+  const personId = String(formData.get("personId") ?? "").trim() || null;
   const active = formData.get("active") === "on";
 
   if (!name) {
@@ -88,21 +132,31 @@ export async function updateWorkstation(
     return { error: duplicateNameMessage(name) };
   }
 
+  let ipAddress: string | null;
+  let lastMaintenanceAt: Date | null;
+  let fields;
+  try {
+    ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
+    lastMaintenanceAt = parseOptionalDate(formData, "lastMaintenanceAt");
+    fields = parseWorkstationFields(formData);
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Datos inválidos" };
+  }
+
   try {
     await prisma.workstation.update({
       where: { id: workstationId },
       data: {
         name,
-        ipAddress: ipAddress || null,
-        notes: notes || null,
-        personId: personId || null,
+        ipAddress,
+        personId,
         active,
+        lastMaintenanceAt,
+        ...fields,
       },
     });
 
-    revalidatePath("/workstations");
-    revalidatePath(`/workstations/${workstationId}`);
-    revalidatePath("/ips");
+    revalidateWorkstation(workstationId);
     return { ok: true };
   } catch (error) {
     if (
@@ -114,6 +168,66 @@ export async function updateWorkstation(
     console.error("[updateWorkstation]", error);
     return { error: "No se pudo guardar. Intentá de nuevo." };
   }
+}
+
+export async function addWorkstationMaintenance(formData: FormData) {
+  const user = await requireUser();
+  const userId = user.id;
+  if (!userId) throw new Error("Sesión inválida");
+
+  const workstationId = String(formData.get("workstationId") ?? "").trim();
+  if (!workstationId) throw new Error("PC inválida");
+
+  const note = optionalText(formData, "note");
+  let performedAt = new Date();
+  const rawDate = String(formData.get("performedAt") ?? "").trim();
+  if (rawDate) {
+    const parsed = new Date(rawDate);
+    if (Number.isNaN(parsed.getTime())) throw new Error("Fecha inválida");
+    performedAt = parsed;
+  }
+
+  await prisma.$transaction([
+    prisma.workstationMaintenance.create({
+      data: {
+        workstationId,
+        performedAt,
+        note,
+        userId,
+      },
+    }),
+    prisma.workstation.update({
+      where: { id: workstationId },
+      data: { lastMaintenanceAt: performedAt },
+    }),
+  ]);
+
+  revalidateWorkstation(workstationId);
+}
+
+export async function findWorkstationByCode(code: string) {
+  await requireUser();
+  const trimmed = code.trim();
+  if (!trimmed) return null;
+
+  return prisma.workstation.findUnique({
+    where: { code: trimmed },
+    include: {
+      person: true,
+      components: {
+        where: { removedAt: null },
+        include: {
+          asset: { include: { category: true } },
+        },
+        orderBy: { installedAt: "desc" },
+      },
+      maintenances: {
+        include: { user: { select: { name: true } } },
+        orderBy: { performedAt: "desc" },
+        take: 8,
+      },
+    },
+  });
 }
 
 export async function installComponentByCode(
@@ -211,8 +325,7 @@ export async function installComponentByCode(
     });
   });
 
-  revalidatePath(`/workstations/${workstationId}`);
-  revalidatePath("/workstations");
+  revalidateWorkstation(workstationId);
   revalidatePath(`/assets/${asset.id}`);
   revalidatePath("/assets");
   revalidatePath("/movements");
@@ -255,11 +368,9 @@ export async function removeComponent(formData: FormData) {
     });
   });
 
-  revalidatePath(`/workstations/${component.workstationId}`);
-  revalidatePath("/workstations");
+  revalidateWorkstation(component.workstationId);
   revalidatePath(`/assets/${component.assetId}`);
   revalidatePath("/assets");
   revalidatePath("/movements");
   revalidatePath("/");
-  revalidatePath("/scan");
 }

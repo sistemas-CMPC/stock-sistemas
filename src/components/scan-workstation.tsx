@@ -9,8 +9,12 @@ import {
   findAssetByCode,
   returnLoan,
 } from "@/app/actions/movements";
-import { removeComponent } from "@/app/actions/workstations";
+import {
+  findWorkstationByCode,
+  removeComponent,
+} from "@/app/actions/workstations";
 import { ScanInput } from "@/components/scan-input";
+import { ScanPcPanel } from "@/components/scan-pc-panel";
 import { ScanPrinterPanel } from "@/components/scan-printer-panel";
 import { StatusBadge } from "@/components/status-badge";
 import { ASSET_STATUS_LABELS } from "@/lib/labels";
@@ -18,6 +22,7 @@ import { ASSET_STATUS_LABELS } from "@/lib/labels";
 type PersonOption = { id: string; name: string; area: string | null };
 
 type ScannedAsset = NonNullable<Awaited<ReturnType<typeof findAssetByCode>>>;
+type ScannedPc = NonNullable<Awaited<ReturnType<typeof findWorkstationByCode>>>;
 
 export function ScanWorkstation({
   people,
@@ -27,6 +32,7 @@ export function ScanWorkstation({
   printerModels: { id: string; name: string }[];
 }) {
   const [asset, setAsset] = useState<ScannedAsset | null>(null);
+  const [pc, setPc] = useState<ScannedPc | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [mode, setMode] = useState<"loan" | "assignment">("loan");
@@ -42,13 +48,23 @@ export function ScanWorkstation({
     setError(null);
     setMessage(null);
     startTransition(async () => {
-      const found = await findAssetByCode(code);
-      if (!found) {
-        setAsset(null);
-        setError(`No se encontró un activo con código “${code}”.`);
+      const foundAsset = await findAssetByCode(code);
+      if (foundAsset) {
+        setPc(null);
+        setAsset(foundAsset);
         return;
       }
-      setAsset(found);
+
+      const foundPc = await findWorkstationByCode(code);
+      if (foundPc) {
+        setAsset(null);
+        setPc(foundPc);
+        return;
+      }
+
+      setAsset(null);
+      setPc(null);
+      setError(`No se encontró activo ni PC con código “${code}”.`);
     });
   }
 
@@ -57,19 +73,50 @@ export function ScanWorkstation({
     setAsset(found);
   }
 
+  async function refreshPc(code: string) {
+    const found = await findWorkstationByCode(code);
+    setPc(found);
+  }
+
   return (
     <div className="space-y-6">
       <div className="card space-y-3">
         <h2 className="text-lg font-semibold">Pistola / teclado</h2>
         <p className="text-sm text-muted">
-          Escaneá el código (QR o barras) con pistola, teclado o cámara del
-          celular. En impresoras vas a ver ubicación, a quién está conectada,
-          toner y reparaciones.
+          Escaneá QR/barras de activos, impresoras o PCs. En PCs ves IP,
+          usuario, componentes y mantenimiento.
         </p>
         <ScanInput onScan={handleScan} />
         {error ? <p className="text-sm text-danger">{error}</p> : null}
         {message ? <p className="text-sm text-ok">{message}</p> : null}
       </div>
+
+      {pc ? (
+        <div className="card space-y-4">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p className="text-xs uppercase tracking-wide text-muted">PC</p>
+              <h3 className="text-2xl font-bold">{pc.name}</h3>
+              <p className="font-mono text-sm text-muted">{pc.code}</p>
+            </div>
+            <Link href={`/workstations/${pc.id}`} className="text-sm text-accent">
+              Ver ficha
+            </Link>
+          </div>
+          <ScanPcPanel
+            pc={pc}
+            onDone={async (msg) => {
+              setError(null);
+              setMessage(msg);
+              await refreshPc(pc.code);
+            }}
+            onError={(msg) => {
+              setMessage(null);
+              setError(msg);
+            }}
+          />
+        </div>
+      ) : null}
 
       {asset ? (
         <div className="card space-y-4">

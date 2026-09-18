@@ -58,6 +58,7 @@ model User {
   movements      Movement[]
   printerEvents  PrinterEvent[]
   tonerMovements TonerMovement[]
+  pcMaintenances WorkstationMaintenance[]
 }
 
 model Category {
@@ -106,16 +107,28 @@ model Asset {
 }
 
 model Workstation {
-  id         String                 @id @default(cuid())
-  name       String                 @unique
-  ipAddress  String?
-  notes      String?
-  active     Boolean                @default(true)
-  personId   String?
-  person     Person?                @relation(fields: [personId], references: [id])
-  createdAt  DateTime               @default(now())
-  updatedAt  DateTime               @updatedAt
-  components WorkstationComponent[]
+  id                String                    @id @default(cuid())
+  /// Código QR para escanear la ficha de la PC
+  code              String                    @unique
+  name              String                    @unique
+  ipAddress         String?
+  /// Sistema operativo instalado
+  os                String?
+  /// RAM (ej. 16 GB DDR4)
+  ram               String?
+  /// Tipo de disco (SSD / HDD / NVMe)
+  diskType          String?
+  /// Capacidad (ej. 512 GB / 1 TB)
+  storage           String?
+  notes             String?
+  lastMaintenanceAt DateTime?
+  active            Boolean                   @default(true)
+  personId          String?
+  person            Person?                   @relation(fields: [personId], references: [id])
+  createdAt         DateTime                  @default(now())
+  updatedAt         DateTime                  @updatedAt
+  components        WorkstationComponent[]
+  maintenances      WorkstationMaintenance[]
 }
 
 model WorkstationComponent {
@@ -131,6 +144,20 @@ model WorkstationComponent {
 
   @@index([assetId, removedAt])
   @@index([workstationId, removedAt])
+}
+
+/// Historial de mantenimientos / arreglos de una PC.
+model WorkstationMaintenance {
+  id            String      @id @default(cuid())
+  workstationId String
+  workstation   Workstation @relation(fields: [workstationId], references: [id], onDelete: Cascade)
+  performedAt   DateTime    @default(now())
+  note          String?
+  userId        String
+  user          User        @relation(fields: [userId], references: [id])
+  createdAt     DateTime    @default(now())
+
+  @@index([workstationId, performedAt])
 }
 
 model BackupInfo {
