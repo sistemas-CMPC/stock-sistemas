@@ -4,6 +4,8 @@ import { revalidatePath } from "next/cache";
 import { PrinterEventType } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
+import { parseOptionalLanIps } from "@/lib/lan-ip";
+import { assertLanIpsAvailable } from "@/lib/ip-inventory";
 
 function revalidatePrinter(assetId?: string) {
   revalidatePath("/scan");
@@ -34,9 +36,11 @@ export async function updatePrinterInfo(formData: FormData) {
   const printerModelId =
     String(formData.get("printerModelId") ?? "").trim() || null;
   const location = String(formData.get("location") ?? "").trim() || null;
-  const ipAddress = String(formData.get("ipAddress") ?? "").trim() || null;
   const connectedTo = String(formData.get("connectedTo") ?? "").trim() || null;
   const notes = String(formData.get("notes") ?? "");
+  const ipAddress = parseOptionalLanIps(
+    String(formData.get("ipAddress") ?? ""),
+  );
 
   if (printerModelId) {
     const exists = await prisma.printerModel.findUnique({
@@ -45,6 +49,11 @@ export async function updatePrinterInfo(formData: FormData) {
     });
     if (!exists) throw new Error("Modelo de impresora inválido");
   }
+
+  await assertLanIpsAvailable(ipAddress, {
+    kind: "printer",
+    sourceId: assetId,
+  });
 
   await prisma.printerInfo.upsert({
     where: { assetId },

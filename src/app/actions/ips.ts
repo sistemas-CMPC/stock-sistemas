@@ -5,6 +5,7 @@ import { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { parseOptionalLanIp } from "@/lib/lan-ip";
+import { assertLanIpsAvailable } from "@/lib/ip-inventory";
 
 function revalidateIps() {
   revalidatePath("/ips");
@@ -19,6 +20,8 @@ export async function createIpReservation(formData: FormData) {
 
   const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
   if (!ipAddress) throw new Error("IP requerida (192.168.0.1–255)");
+
+  await assertLanIpsAvailable(ipAddress);
 
   try {
     await prisma.ipReservation.create({
@@ -48,6 +51,11 @@ export async function updateIpReservation(formData: FormData) {
 
   const ipAddress = parseOptionalLanIp(String(formData.get("ipAddress") ?? ""));
   if (!ipAddress) throw new Error("IP requerida");
+
+  await assertLanIpsAvailable(ipAddress, {
+    kind: "reservation",
+    sourceId: id,
+  });
 
   try {
     await prisma.ipReservation.update({

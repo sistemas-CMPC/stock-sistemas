@@ -7,6 +7,7 @@ import { prisma } from "@/lib/prisma";
 import { requireUser } from "@/lib/session";
 import { generateAssetCode } from "@/lib/labels";
 import { parseOptionalLanIps } from "@/lib/lan-ip";
+import { assertLanIpsAvailable } from "@/lib/ip-inventory";
 
 export type CreateWorkstationState = { error?: string } | undefined;
 export type UpdateWorkstationState = { error?: string; ok?: boolean } | undefined;
@@ -77,6 +78,7 @@ export async function createWorkstation(
     ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
     lastMaintenanceAt = parseOptionalDate(formData, "lastMaintenanceAt");
     fields = parseWorkstationFields(formData);
+    await assertLanIpsAvailable(ipAddress);
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Datos inválidos" };
   }
@@ -139,6 +141,10 @@ export async function updateWorkstation(
     ipAddress = parseOptionalLanIps(String(formData.get("ipAddress") ?? ""));
     lastMaintenanceAt = parseOptionalDate(formData, "lastMaintenanceAt");
     fields = parseWorkstationFields(formData);
+    await assertLanIpsAvailable(ipAddress, {
+      kind: "workstation",
+      sourceId: workstationId,
+    });
   } catch (error) {
     return { error: error instanceof Error ? error.message : "Datos inválidos" };
   }

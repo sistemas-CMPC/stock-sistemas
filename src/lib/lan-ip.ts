@@ -119,6 +119,8 @@ export type IpOccupant = {
   name: string;
   detail?: string;
   href: string;
+  /** Id de la ficha (PC, asset impresora, server, etc.) para excluir al editar */
+  sourceId?: string;
   /** Solo para reservas rápidas de /ips */
   reservationId?: string;
 };

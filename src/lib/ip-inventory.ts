@@ -90,6 +90,7 @@ export async function collectOccupiedIps(): Promise<Map<number, IpOccupant[]>> {
       name: pc.name,
       detail: pc.active ? undefined : "inactiva",
       href: `/workstations/${pc.id}`,
+      sourceId: pc.id,
     });
   }
 
@@ -101,6 +102,7 @@ export async function collectOccupiedIps(): Promise<Map<number, IpOccupant[]>> {
       detail:
         printer.asset.status === "RETIRED" ? "dada de baja" : undefined,
       href: `/assets/${printer.asset.id}`,
+      sourceId: printer.asset.id,
     });
   }
 
@@ -111,6 +113,7 @@ export async function collectOccupiedIps(): Promise<Map<number, IpOccupant[]>> {
       name: server.name,
       detail: server.active ? undefined : "inactivo",
       href: `/servers/${server.id}`,
+      sourceId: server.id,
     });
   }
 
@@ -121,6 +124,7 @@ export async function collectOccupiedIps(): Promise<Map<number, IpOccupant[]>> {
       name: vm.name,
       detail: `en ${vm.server.name}${vm.active ? "" : " · inactiva"}`,
       href: `/servers/${vm.serverId}`,
+      sourceId: vm.id,
     });
   }
 
@@ -131,6 +135,7 @@ export async function collectOccupiedIps(): Promise<Map<number, IpOccupant[]>> {
       name: service.name,
       detail: `VM ${service.vm.name} · ${service.vm.server.name}`,
       href: `/servers/${service.vm.serverId}`,
+      sourceId: service.id,
     });
   }
 
@@ -141,11 +146,52 @@ export async function collectOccupiedIps(): Promise<Map<number, IpOccupant[]>> {
       name: reservation.label,
       detail: reservation.notes ?? undefined,
       href: `/ips?q=${encodeURIComponent(reservation.ipAddress)}`,
+      sourceId: reservation.id,
       reservationId: reservation.id,
     });
   }
 
   return byHost;
+}
+
+export type IpAvailabilityExclude = {
+  kind: IpOccupant["kind"];
+  sourceId: string;
+};
+
+/** Lanza error si alguna IP ya está usada por otra ficha (excluye la actual al editar). */
+export async function assertLanIpsAvailable(
+  rawIps: string | null | undefined,
+  exclude?: IpAvailabilityExclude,
+) {
+  const ips = extractLanIps(rawIps ?? "");
+  if (ips.length === 0) return;
+
+  const byHost = await collectOccupiedIps();
+  const conflicts: IpOccupant[] = [];
+
+  for (const ip of ips) {
+    const host = Number(ip.slice(LAN_PREFIX.length));
+    for (const occupant of byHost.get(host) ?? []) {
+      if (
+        exclude &&
+        occupant.kind === exclude.kind &&
+        occupant.sourceId === exclude.sourceId
+      ) {
+        continue;
+      }
+      conflicts.push(occupant);
+    }
+  }
+
+  if (conflicts.length === 0) return;
+
+  const detail = conflicts
+    .map((c) => `${c.ip} → ${c.name} (${c.kindLabel})`)
+    .join("; ");
+  throw new Error(
+    `IP ya ocupada: ${detail}. Cambiá la IP o liberá la otra ficha antes de guardar.`,
+  );
 }
 
 export async function getIpInventory(options?: {
