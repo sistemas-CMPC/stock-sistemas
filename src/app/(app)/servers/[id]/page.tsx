@@ -9,17 +9,24 @@ type Props = { params: Promise<{ id: string }> };
 
 export default async function ServerDetailPage({ params }: Props) {
   const { id } = await params;
-  const server = await prisma.server.findUnique({
-    where: { id },
-    include: {
-      vms: {
-        include: {
-          services: { orderBy: { name: "asc" } },
+  const [server, otherServers] = await Promise.all([
+    prisma.server.findUnique({
+      where: { id },
+      include: {
+        vms: {
+          include: {
+            services: { orderBy: { name: "asc" } },
+          },
+          orderBy: { name: "asc" },
         },
-        orderBy: { name: "asc" },
       },
-    },
-  });
+    }),
+    prisma.server.findMany({
+      where: { id: { not: id }, active: true },
+      select: { id: true, name: true },
+      orderBy: { name: "asc" },
+    }),
+  ]);
 
   if (!server) notFound();
 
@@ -64,7 +71,11 @@ export default async function ServerDetailPage({ params }: Props) {
 
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">Máquinas virtuales</h2>
-        <ServerVmsPanel serverId={server.id} vms={server.vms} />
+        <ServerVmsPanel
+          serverId={server.id}
+          vms={server.vms}
+          otherServers={otherServers}
+        />
       </section>
     </div>
   );

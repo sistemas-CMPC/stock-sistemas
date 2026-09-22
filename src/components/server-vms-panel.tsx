@@ -5,6 +5,7 @@ import {
   createVmService,
   deleteVm,
   deleteVmService,
+  migrateVm,
   updateVm,
   updateVmService,
 } from "@/app/actions/servers";
@@ -31,6 +32,11 @@ type Vm = {
   services: Service[];
 };
 
+type ServerOption = {
+  id: string;
+  name: string;
+};
+
 function resourcesSummary(vm: Vm) {
   const parts: string[] = [];
   if (vm.vcpu != null) parts.push(`${vm.vcpu} vCPU`);
@@ -42,9 +48,11 @@ function resourcesSummary(vm: Vm) {
 export function ServerVmsPanel({
   serverId,
   vms,
+  otherServers,
 }: {
   serverId: string;
   vms: Vm[];
+  otherServers: ServerOption[];
 }) {
   return (
     <div className="space-y-4">
@@ -167,6 +175,48 @@ export function ServerVmsPanel({
               </button>
             </form>
           </div>
+
+          {otherServers.length > 0 ? (
+            <form
+              action={migrateVm}
+              className="flex flex-wrap items-end gap-2 rounded-lg border border-border bg-surface-2 p-3"
+              onSubmit={(event) => {
+                const select = event.currentTarget.elements.namedItem(
+                  "toServerId",
+                ) as HTMLSelectElement | null;
+                const targetName =
+                  select?.selectedOptions[0]?.textContent?.trim() ?? "otro servidor";
+                if (
+                  !window.confirm(
+                    `¿Migrar “${vm.name}” a ${targetName}?`,
+                  )
+                ) {
+                  event.preventDefault();
+                }
+              }}
+            >
+              <input type="hidden" name="vmId" value={vm.id} />
+              <input type="hidden" name="fromServerId" value={serverId} />
+              <div className="min-w-[12rem] flex-1">
+                <label className="label">Migrar a servidor</label>
+                <select name="toServerId" required className="input">
+                  <option value="">Elegir destino…</option>
+                  {otherServers.map((server) => (
+                    <option key={server.id} value={server.id}>
+                      {server.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <button type="submit" className="btn-secondary">
+                Migrar VM
+              </button>
+            </form>
+          ) : (
+            <p className="text-xs text-muted">
+              Para migrar esta VM necesitás al menos otro servidor cargado.
+            </p>
+          )}
 
           <form
             action={updateVm}

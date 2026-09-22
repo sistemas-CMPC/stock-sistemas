@@ -206,6 +206,57 @@ export async function deleteVm(formData: FormData) {
   revalidateServers(serverId);
 }
 
+/** Mueve una VM de un servidor a otro (migración). */
+export async function migrateVm(formData: FormData) {
+  await requireUser();
+  const vmId = String(formData.get("vmId") ?? "").trim();
+  const fromServerId = String(formData.get("fromServerId") ?? "").trim();
+  const toServerId = String(formData.get("toServerId") ?? "").trim();
+
+  if (!vmId || !fromServerId || !toServerId) {
+    throw new Error("Datos de migración incompletos");
+  }
+  if (fromServerId === toServerId) {
+    throw new Error("Elegí un servidor distinto al actual");
+  }
+
+  const [vm, target] = await Promise.all([
+    prisma.virtualMachine.findUnique({
+      where: { id: vmId },
+      select: { id: true, name: true, serverId: true },
+    }),
+    prisma.server.findUnique({
+      where: { id: toServerId },
+      select: { id: true, name: true },
+    }),
+  ]);
+
+  if (!vm) throw new Error("VM no encontrada");
+  if (vm.serverId !== fromServerId) {
+    throw new Error("La VM no pertenece a este servidor");
+  }
+  if (!target) throw new Error("Servidor destino inválido");
+
+  const nameClash = await prisma.virtualMachine.findFirst({
+    where: { serverId: toServerId, name: vm.name },
+    select: { id: true },
+  });
+  if (nameClash) {
+    throw new Error(
+      `En “${target.name}” ya hay una VM llamada “${vm.name}”. Renombrala antes de migrar.`,
+    );
+  }
+
+  await prisma.virtualMachine.update({
+    where: { id: vmId },
+    data: { serverId: toServerId },
+  });
+
+  revalidateServers(fromServerId);
+  revalidateServers(toServerId);
+  redirect(`/servers/${toServerId}`);
+}
+
 export async function createVmService(formData: FormData) {
   await requireUser();
   const vmId = String(formData.get("vmId") ?? "").trim();
